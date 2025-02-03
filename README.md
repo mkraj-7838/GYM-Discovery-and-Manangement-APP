@@ -1,131 +1,92 @@
-# Gym Management and Discovery App
+# 🏋️‍♂️ Gym Management and Discovery App  
 
-## Overview
+## 📌 Overview  
+The **Gym Management and Discovery App** is a comprehensive platform that streamlines **gym operations** while enhancing user engagement. Inspired by platforms like **Zomato** and **Swiggy**, it allows users to **discover gyms, manage memberships, and track attendance** effortlessly.  
 
-The Gym Management and Discovery App is a comprehensive platform designed to streamline gym operations and improve user experience. It integrates gym discovery, management, and trainer recruitment, drawing inspiration from popular platforms like Zomato and Swiggy. The app caters to three primary user roles: Admin, Trainers, and Gym Members (Gymers), and offers a range of features to support gym management, user engagement, and gym discovery.
+This app serves **two primary user roles**:  
+- 🔹 **Admin** – Manages gym operations, members, pricing, and updates.  
+- 🔹 **Gym Members (Gymers)** – Tracks attendance, explores gyms, and engages with the gym community.  
 
-## Features
+---
 
-### Gym Discovery Module
-* **Locate Nearby Gyms:**
-  * GPS-based location and filters such as price, infrastructure, and equipment.
-* **Gym Details:**
-  * View gym photos, ratings, reviews, membership plans, and more.
-* **Homepage Features:**
-  * Updates on inter-gym competitions, announcements, fitness records, and nearby gyms.
+## ✨ Features  
 
-### Gym Management Module
-* **Admin Role:**
-  * Manage members and trainers, update gym pricing, view activity logs, and post updates.
-* **Trainer Role:**
-  * Manage assigned users, track progress, and communicate via a chat section.
-* **Gym Member Role (Gymers):**
-  * Attendance system, personal dashboard, and communication with trainers.
+### 🎯 *Gym Discovery Module*  
+- 📍 **Locate Nearby Gyms** – GPS-based search with filters (**price, equipment, facilities**).  
+- 🏋️‍♂️ **Gym Details** – View **photos, ratings, reviews, membership plans, and facilities**.  
+- 📰 **Homepage Highlights** – Updates on **inter-gym competitions, records, and announcements**.  
 
-### Additional Features
-* **Complaint/Feedback Section:**
-  * For users to raise complaints, provide feedback, or report issues.
-* **Trainer Recruitment:**
-  * A section for gyms to post job openings and for trainers to apply.
+### 🎯 *Gym Management Module*  
+- 🛠 **Admin Dashboard** – Manage **gym members, pricing**, and post updates.  
+- 📅 **Attendance Tracking** – Members can **mark attendance** via the app.  
 
-## Technical Requirements
+### 🎯 *Complaint & Feedback System*  
+- 📝 Users can **submit complaints, feedback, and suggestions** to improve gym services.  
+- 📌 Track complaint status (*Open, In Progress, Resolved*).  
 
-* **Frontend:**
-  * Mobile App: Kotlin with Jetpack Compose (Android).
-  * Admin Dashboard: React.js or Next.js (Web).
-* **Backend:**
-  * Framework: Ktor (Kotlin) or Spring Boot.
-  * Database: PostgreSQL or MongoDB.
-  * Authentication: JWT (JSON Web Tokens).
-  * Maps Integration: Google Maps API for location services.
-* **Cloud Services:**
-  * File Storage: AWS S3 or Firebase Storage.
-  * Push Notifications: Firebase Cloud Messaging (FCM).
+---
 
-## Database Schema
+## ⚙ Tech Stack  
 
-* **Users Table:**
-  * `user_id` (Primary Key)
-  * `name`
-  * `email` (unique)
-  * `password`
-  * `role` (admin, trainer, member)
-  * `phone_number`
-  * `address`
-  * `registration_date`
-  * `status` (trial, active, inactive)
-* **Gyms Table:**
-  * `gym_id` (Primary Key)
-  * `name`
-  * `address`
-  * `latitude`, `longitude`
-  * `price_range`
-  * `infrastructure` (JSON: {machines, facilities})
-  * `rating` (average rating)
-  * `owner_contact`
-* **Memberships Table:**
-  * `membership_id` (Primary Key)
-  * `user_id` (Foreign Key)
-  * `gym_id` (Foreign Key)
-  * `start_date`
-  * `end_date`
-  * `status` (active, expired)
-  * `price`
-* **Attendance Table:**
-  * `attendance_id` (Primary Key)
-  * `user_id` (Foreign Key)
-  * `date`
-  * `status` (present, absent)
-* **Chats Table:**
-  * `chat_id` (Primary Key)
-  * `sender_id` (Foreign Key)
-  * `receiver_id` (Foreign Key)
-  * `message`
-  * `timestamp`
-* **Notices Table:**
-  * `notice_id` (Primary Key)
-  * `admin_id` (Foreign Key)
-  * `title`
-  * `description`
-  * `date_posted`
-* **Feedback/Complaints Table:**
-  * `feedback_id` (Primary Key)
-  * `user_id` (Foreign Key)
-  * `description`
-  * `type` (complaint, suggestion, feedback)
-  * `status` (open, resolved)
-  * `timestamp`
-* **Recruitment Table:**
-  * `job_id` (Primary Key)
-  * `gym_id` (Foreign Key)
-  * `title`
-  * `description`
-  * `salary_range`
-  * `requirements`
-  * `status` (open, closed)
+The *Gym Management and Discovery App* is built using the following technologies:  
 
-## API Endpoints
+### 🎯 *Frontend*  
+- 📱 **Mobile App** – *Kotlin with Jetpack Compose* (Android).  
+- 🖥 **Admin Dashboard** – *React.js or Next.js* (Web).  
 
-* **User APIs:**
-  * `POST /login`: Authenticate users and return tokens.
-  * `POST /register`: Register new users.
-  * `GET /gyms?location=lat,lng&filters=...`: Fetch nearby gyms.
-  * `GET /gyms/{gym_id}`: Fetch details of a specific gym.
-  * `POST /attendance`: Mark attendance.
-  * `POST /feedback`: Submit feedback or complaints.
-* **Admin APIs:**
-  * `GET /users`: Fetch all users.
-  * `POST /users`: Add new members or trainers.
-  * `PUT /users/{user_id}`: Update user details.
-  * `DELETE /users/{user_id}`: Remove a user.
-  * `POST /notices`: Post updates.
-## UI Wireframes
+### 🎯 *Backend*  
+- 🚀 **Framework** – *Ktor (Kotlin)* or *Spring Boot*.  
+- 🛢 **Database** – *PostgreSQL* or *MongoDB*.  
+- 🔑 **Authentication** – *JWT (JSON Web Tokens)*.  
+- 🌍 **Maps Integration** – *Google Maps API* for location-based services.  
 
-* **Homepage:**
-  * Carousel for updates, nearby gyms, search bar.
-* **Gym Details:**
-  * Photo gallery, ratings, plans, equipment, and directions.
+### 🎯 *Cloud Services*  
+- 📂 **File Storage** – *AWS S3* or *Firebase Storage*.  
+- 🔔 **Push Notifications** – *Firebase Cloud Messaging (FCM)*.  
 
-## Conclusion
+---
 
-The Gym Management and Discovery App provides a user-friendly, feature-rich experience for users, gym owners, and trainers. It integrates essential functionalities in one platform, enhancing the gym experience while streamlining operations for gym management and recruitment.
+## 🖌 UI Wireframes  
+
+### 📌 *Homepage*  
+- 🔹 **Carousel for Updates**  
+- 🔹 **Search Nearby Gyms**  
+- 🔹 **Inter-gym Competitions & Announcements**  
+
+### 📌 *Gym Details Page*  
+- 🏋️ **Photo Gallery & Ratings**  
+- 💰 **Membership Plans & Pricing**  
+- 📍 **Location with Google Maps Integration**  
+
+---
+
+## 📅 Development Timeline  
+
+| Week | Milestone | Tasks |
+|------|-----------|-------|
+| *1* | **Project Setup & Research** | 📌 Finalize tech stack <br> 📌 Set up GitHub repository <br> 📌 Configure Firebase/AWS services |
+| *2* | **UI/UX Design** | 🎨 Design wireframes & mockups <br> 🎨 Plan user flows for admins & members |
+| *3* | **Authentication System** | 🔐 Set up JWT-based authentication <br> 🔐 Implement admin & member login |
+| *4-5* | **Gym Discovery Module** | 📍 Integrate Google Maps API <br> 📍 Develop gym listing & filtering features |
+| *6-7* | **Gym Management & Attendance** | 🛠 Build admin dashboard <br> 🛠 Implement attendance tracking |
+| *8-9* | **Feedback & Notifications** | 📝 Implement complaint & feedback system <br> 🔔 Set up push notifications |
+| *10* | **Testing & Bug Fixes** | ✅ Conduct unit & UI testing <br> ✅ Optimize performance |
+| *11-12* | **Final Deployment & Documentation** | 🚀 Deploy app <br> 📄 Complete README & documentation |
+
+---
+
+## 📜 License  
+
+This project is licensed under the **MIT License**.  
+
+---
+
+## 📧 Contact  
+
+For queries or suggestions, please reach out to the team:  
+
+📩 *Mohit Kumar* – [221210070@nitdelhi.ac.in](mailto:221210070@nitdelhi.ac.in)  
+📩 *Muskan Negi* – [221210072@nitdelhi.ac.in](mailto:221210072@nitdelhi.ac.in)  
+📩 *Pathi Ankit* – [22120077@nitdelhi.ac.in](mailto:22120077@nitdelhi.ac.in) 
+
+Let’s make **fitness management smarter and more accessible! 💪🔥**
