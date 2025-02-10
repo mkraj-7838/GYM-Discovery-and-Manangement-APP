@@ -60,18 +60,17 @@ The *Gym Management and Discovery App* is built using the following technologies
 
 ---
 
-## 📅 Development Timeline  
+---
 
-| Week | Milestone | Tasks |
-|------|-----------|-------|
-| *1* | **Project Setup & Research** | 📌 Finalize tech stack <br> 📌 Set up GitHub repository <br> 📌 Configure Firebase/AWS services |
-| *2* | **UI/UX Design** | 🎨 Design wireframes & mockups <br> 🎨 Plan user flows for admins & members |
-| *3* | **Authentication System** | 🔐 Set up JWT-based authentication <br> 🔐 Implement admin & member login |
-| *4-5* | **Gym Discovery Module** | 📍 Integrate Google Maps API <br> 📍 Develop gym listing & filtering features |
-| *6-7* | **Gym Management & Attendance** | 🛠 Build admin dashboard <br> 🛠 Implement attendance tracking |
-| *8-9* | **Feedback & Notifications** | 📝 Implement complaint & feedback system <br> 🔔 Set up push notifications |
-| *10* | **Testing & Bug Fixes** | ✅ Conduct unit & UI testing <br> ✅ Optimize performance |
-| *11-12* | **Final Deployment & Documentation** | 🚀 Deploy app <br> 📄 Complete README & documentation |
+## 📅 **Development Timeline**
+
+| **Week**  | **Milestone**  | **Key Tasks**  |
+|-----------|--------------|----------------|
+| **1-2**  | **Planning & Research**  | 📌 Requirement analysis <br> 📌 Forming the development team <br> 📌 Studying competitor apps <br> 📌 Defining project scope |
+| **3-5**  | **Setup & Design**  | 🛠 Environment setup <br> 🎨 UI/UX designing <br> 🗄 Database schema creation |
+| **6-7**  | **Backend Development**  | 🚀 Building APIs <br> 🔗 Implementing authentication <br> 🗄 Database integration |
+| **8-10** | **Frontend Development**  | 📱 Developing React Native UI <br> 🎨 Implementing designs <br> 🔄 API integration |
+| **11-12** | **Testing & Deployment**  | 🛠 Unit and UI testing <br> 🚀 Bug fixes and optimizations <br> 🌍 Deployment to production |
 
 ---
 
