@@ -60,8 +60,6 @@ The *Gym Management and Discovery App* is built using the following technologies
 
 ---
 
----
-
 ## 📅 **Development Timeline**
 
 | **Week**  | **Milestone**  | **Key Tasks**  |
