@@ -12,7 +12,7 @@ This app serves **two primary user roles**:
 ## ✨ Features  
 
 ### 🎯 *Gym Discovery Module*  
-- 📍 **Locate Nearby Gyms** – GPS-based search with filters (**price, equipment, facilities**).  
+- 📍 **Locate Nearby Gyms** – location-based search with filters (**price, equipment, facilities**).  
 - 🏋️‍♂️ **Gym Details** – View **photos, ratings, reviews, membership plans, and facilities**.  
 - 📰 **Homepage Highlights** – Updates on **inter-gym competitions, records, and announcements**.  
 
@@ -30,19 +30,19 @@ This app serves **two primary user roles**:
 
 The *Gym Management and Discovery App* is built using the following technologies:  
 
-### 🎯 *Frontend*  
-- 📱 **Mobile App** – *Kotlin with Jetpack Compose* (Android).  
-- 🖥 **Admin Dashboard** – *React.js or Next.js* (Web).  
+## 🎯 **Frontend**
+- **Mobile App** – React Native with TypeScript (cross-platform mobile development).
+- **UI Styling** – TailwindCSS (via NativeWind) for responsive and utility-first design.
+- **Navigation** – React Navigation for intuitive user navigation.
+- **State Management** – Redux Toolkit for managing application state.
 
-### 🎯 *Backend*  
-- 🚀 **Framework** – *Ktor (Kotlin)* or *Spring Boot*.  
-- 🛢 **Database** – *PostgreSQL* or *MongoDB*.  
-- 🔑 **Authentication** – *JWT (JSON Web Tokens)*.  
-- 🌍 **Maps Integration** – *Google Maps API* for location-based services.  
+## 🎯 **Backend**
+- **Framework** – Node.js with Express.js for building RESTful APIs.
+- **Authentication** – JWT (JSON Web Tokens) for secure user authentication.
 
-### 🎯 *Cloud Services*  
-- 📂 **File Storage** – *AWS S3* or *Firebase Storage*.  
-- 🔔 **Push Notifications** – *Firebase Cloud Messaging (FCM)*.  
+## 🎯 **Database**
+- **Primary Database** – MongoDB (NoSQL) for storing structured and unstructured data.
+- **Schema Management** – Mongoose for defining data schemas and relationships.
 
 ---
 
