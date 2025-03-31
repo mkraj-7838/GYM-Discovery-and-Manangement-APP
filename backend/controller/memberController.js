@@ -2,6 +2,30 @@ import asyncHandler from "express-async-handler";
 import Member from "../models/Member.js";
 import User from "../models/UserSchema.js";
 
+// Utility function to check if subscription is expired
+const checkSubscriptionStatus = (member) => {
+  if (member.status === "inactive") return member; // Already inactive
+  
+  // For trial members, we might want different logic
+  if (member.status === "trial") return member;
+  
+  if (!member.joiningDate || !member.monthsOfSubscription) {
+    return member; // Missing required fields
+  }
+
+  const joinDate = new Date(member.joiningDate);
+  const endDate = new Date(joinDate);
+  endDate.setMonth(joinDate.getMonth() + member.monthsOfSubscription);
+  
+  const today = new Date();
+  
+  if (today > endDate) {
+    member.status = "inactive";
+  }
+  
+  return member;
+};
+
 // @route   POST /api/user/members
 // @desc    Add a new member and link it to the user
 // @access  Private
@@ -104,8 +128,25 @@ const getMembersByUser = asyncHandler(async (req, res) => {
     throw new Error("User not authenticated");
   }
 
+  // Find all members and check their subscription status
   const members = await Member.find({ createdBy: userId }).populate("createdBy", "name email");
-  res.json(members);
+  
+  // Check and update expired subscriptions
+  const updatedMembers = await Promise.all(
+    members.map(async (member) => {
+      const checkedMember = checkSubscriptionStatus(member);
+      
+      // If status changed to Inactive, save to database
+      if (checkedMember.isModified && checkedMember.isModified('status')) {
+        await Member.findByIdAndUpdate(member._id, { status: "inactive" });
+        return { ...member.toObject(), status: "inactive" };
+      }
+      
+      return member;
+    })
+  );
+
+  res.json(updatedMembers);
 });
 
 export { addMember, getMembersByUser };

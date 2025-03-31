@@ -6,11 +6,11 @@ const UserSchema = new mongoose.Schema(
     password: { type: String, required: true },
     name: { type: String }, // Optional
     gymName: { type: String },
-    userID: { type: String, unique: true }, // Optional but unique
     photo: { type: String }, // Optional (store image URL)
     phone: { type: String },
     address: { type: String },
-    members: [{ type: mongoose.Schema.Types.ObjectId, ref: "Member" }] // Optional
+    members: [{ type: mongoose.Schema.Types.ObjectId, ref: "Member" }], // Optional
+    membershipPlans: [{ type: mongoose.Schema.Types.ObjectId, ref: "MembershipPlan" }]
   },
   {
     timestamps: true,
