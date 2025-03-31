@@ -1,0 +1,586 @@
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  ActivityIndicator,
+  Animated,
+  TouchableOpacity,
+  Alert,
+  Dimensions,
+  RefreshControl
+} from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { 
+  Ionicons, 
+  MaterialIcons, 
+  MaterialCommunityIcons, 
+  FontAwesome,
+  AntDesign,
+  Feather 
+} from "@expo/vector-icons";
+import * as Animatable from 'react-native-animatable';
+import AttendanceCalendar from "../../components/attendanceCalender";
+
+const { width } = Dimensions.get('window');
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:3000/api";
+
+const MemberDetailScreen = () => {
+  const { id } = useLocalSearchParams();
+  const router = useRouter();
+  const [member, setMember] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [remainingDays, setRemainingDays] = useState(null);
+  const [activeTab, setActiveTab] = useState('details');
+  const [refreshing, setRefreshing] = useState(false);
+  const fadeAnim = useState(new Animated.Value(0))[0];
+
+  // Enhanced dark theme colors
+  const colors = {
+    background: "#0F0F0F",
+    primary: "#1E88E5",
+    secondary: "#FFFFFF",
+    accent: "#00C853",
+    text: "#E0E0E0",
+    textSecondary: "#9E9E9E",
+    cardBackground: "#1A1A1A",
+    warning: "#FFC107",
+    danger: "#FF5252",
+    success: "#4CAF50",
+    border: "#2D2D2D",
+    highlight: "#1E88E5",
+    tabActive: "#1E88E5",
+    tabInactive: "#2D2D2D",
+  };
+
+  const calculateRemainingDays = (joiningDate, monthsOfSubscription) => {
+    if (!joiningDate || !monthsOfSubscription) return null;
+
+    const joinDate = new Date(joiningDate);
+    const endDate = new Date(joinDate);
+    endDate.setMonth(joinDate.getMonth() + parseInt(monthsOfSubscription));
+
+    const today = new Date();
+    const diffTime = endDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    return diffDays;
+  };
+
+  const fetchMemberDetails = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API_BASE_URL}/user/members/${id}`);
+      const data = await response.json();
+      setMember(data);
+
+      if (data.joiningDate && data.monthsOfSubscription) {
+        const days = calculateRemainingDays(
+          data.joiningDate,
+          data.monthsOfSubscription
+        );
+        setRemainingDays(days);
+      }
+    } catch (error) {
+      console.error("Error fetching member details:", error);
+      Alert.alert("Error", "Failed to load member details");
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMemberDetails();
+  }, [id]);
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const handleDeleteMember = async () => {
+    Alert.alert(
+      "Delete Member",
+      "Are you sure you want to delete this member?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const response = await fetch(
+                `${API_BASE_URL}/user/members/${id}`,
+                {
+                  method: "DELETE",
+                }
+              );
+              if (response.ok) {
+                Alert.alert("Success", "Member deleted successfully");
+                router.back();
+              } else {
+                Alert.alert("Error", "Failed to delete member");
+              }
+            } catch (error) {
+              console.error("Error deleting member:", error);
+              Alert.alert("Error", "An error occurred while deleting the member");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchMemberDetails();
+  };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.text }]}>Loading member details...</Text>
+      </View>
+    );
+  }
+
+  if (!member) {
+    return (
+      <View style={[styles.errorContainer, { backgroundColor: colors.background }]}>
+        <MaterialIcons name="error-outline" size={50} color={colors.danger} />
+        <Text style={[styles.errorText, { color: colors.text }]}>Member not found</Text>
+        <TouchableOpacity 
+          style={[styles.retryButton, { backgroundColor: colors.primary }]}
+          onPress={fetchMemberDetails}
+        >
+          <Feather name="refresh-cw" size={18} color="white" />
+          <Text style={styles.retryText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const avatarUrl = member.photo
+    ? member.photo
+    : `https://api.dicebear.com/7.x/initials/png?seed=${encodeURIComponent(member.name)}&size=100&background=1E88E5&color=fff`;
+
+  let subscriptionStatusMessage = "";
+  let subscriptionStatusColor = colors.text;
+  let statusIcon = "timer";
+
+  if (remainingDays !== null) {
+    if (remainingDays <= 0) {
+      subscriptionStatusMessage = "Membership Expired!";
+      subscriptionStatusColor = colors.danger;
+      statusIcon = "close-circle";
+    } else if (remainingDays <= 10) {
+      subscriptionStatusMessage = `Only ${remainingDays} day${remainingDays !== 1 ? "s" : ""} remaining!`;
+      subscriptionStatusColor = colors.warning;
+      statusIcon = "alert-circle";
+    } else {
+      subscriptionStatusMessage = `${remainingDays} day${remainingDays !== 1 ? "s" : ""} remaining`;
+      statusIcon = "timer";
+    }
+  }
+
+  const renderDetailItem = (iconName, label, value, iconColor = colors.text) => (
+    <View style={styles.detailRow}>
+      <MaterialCommunityIcons name={iconName} size={20} color={iconColor} style={styles.detailIcon} />
+      <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>{label}:</Text>
+      <Text style={[styles.detailValue, { color: colors.text }]}>{value || "N/A"}</Text>
+    </View>
+  );
+
+  return (
+    <Animated.View style={[styles.container, { backgroundColor: colors.background, opacity: fadeAnim }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          onPress={() => router.back()}
+          style={styles.headerButton}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Member Profile</Text>
+        
+        <View style={styles.headerActions}>
+          <TouchableOpacity 
+            onPress={() => router.push({ pathname: "/(member)/update-member/[id]", params: { id } })}
+            style={styles.headerButton}
+          >
+            <Feather name="edit" size={20} color={colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={handleDeleteMember}
+            style={styles.headerButton}
+          >
+            <MaterialIcons name="delete" size={20} color={colors.danger} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <ScrollView 
+        contentContainerStyle={styles.scrollContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
+      >
+        {/* Profile Card */}
+        <Animatable.View 
+          animation="fadeInUp"
+          duration={600}
+          style={[styles.profileCard, { backgroundColor: colors.cardBackground }]}
+        >
+          <View style={styles.profileTop}>
+            <Image
+              source={{ uri: avatarUrl }}
+              style={styles.photo}
+              onError={(e) => console.log("Error loading image:", e.nativeEvent.error)}
+            />
+            
+            <View style={styles.profileInfo}>
+              <Text style={[styles.name, { color: colors.text }]}>{member.name}</Text>
+              <View style={styles.statusContainer}>
+                <Ionicons 
+                  name={statusIcon} 
+                  size={20} 
+                  color={subscriptionStatusColor} 
+                />
+                <Text style={[styles.statusText, { color: subscriptionStatusColor }]}>
+                  {member.status ? member.status.toUpperCase() : "N/A"}
+                </Text>
+              </View>
+              {remainingDays !== null && (
+                <Text style={[styles.daysRemaining, { color: subscriptionStatusColor }]}>
+                  {subscriptionStatusMessage}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.profileMeta}>
+            <View style={styles.metaItem}>
+              <MaterialIcons name="phone" size={16} color={colors.textSecondary} />
+              <Text style={[styles.metaText, { color: colors.text }]}>{member.phone || "No phone"}</Text>
+            </View>
+            <View style={styles.metaItem}>
+              <MaterialIcons name="email" size={16} color={colors.textSecondary} />
+              <Text style={[styles.metaText, { color: colors.text }]}>{member.email || "No email"}</Text>
+            </View>
+          </View>
+        </Animatable.View>
+
+        {/* Tabs */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[
+              styles.tabButton,
+              activeTab === 'details' 
+                ? { backgroundColor: colors.tabActive }
+                : { backgroundColor: colors.tabInactive }
+            ]}
+            onPress={() => setActiveTab('details')}
+          >
+            <MaterialIcons 
+              name="info" 
+              size={20} 
+              color={activeTab === 'details' ? colors.secondary : colors.textSecondary} 
+            />
+            <Text style={[
+              styles.tabText,
+              { color: activeTab === 'details' ? colors.secondary : colors.textSecondary }
+            ]}>
+              Details
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[
+              styles.tabButton,
+              activeTab === 'attendance' 
+                ? { backgroundColor: colors.tabActive }
+                : { backgroundColor: colors.tabInactive }
+            ]}
+            onPress={() => setActiveTab('attendance')}
+          >
+            <MaterialCommunityIcons 
+              name="calendar-check" 
+              size={20} 
+              color={activeTab === 'attendance' ? colors.secondary : colors.textSecondary} 
+            />
+            <Text style={[
+              styles.tabText,
+              { color: activeTab === 'attendance' ? colors.secondary : colors.textSecondary }
+            ]}>
+              Attendance
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Content based on active tab */}
+        {activeTab === 'details' ? (
+          <Animatable.View 
+            animation="fadeInUp"
+            duration={800}
+            style={styles.contentContainer}
+          >
+            {/* Personal Details Card */}
+            <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
+              <View style={styles.cardHeader}>
+                <MaterialIcons name="person" size={20} color={colors.primary} />
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Personal Details</Text>
+              </View>
+              
+              {renderDetailItem("map-marker", "Address", member.address)}
+              {renderDetailItem("cake", "Age", member.age)}
+              {renderDetailItem("gender-male-female", "Gender", member.gender)}
+              {renderDetailItem("id-card", "ID", member._id.substring(0, 8))}
+            </View>
+
+            {/* Physical Details Card */}
+            <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
+              <View style={styles.cardHeader}>
+                <MaterialCommunityIcons name="arm-flex" size={20} color={colors.primary} />
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Physical Stats</Text>
+              </View>
+              
+              {renderDetailItem("weight-kilogram", "Weight", `${member.weight} kg`)}
+              {renderDetailItem("human-male-height", "Height", `${member.height} cm`)}
+              {renderDetailItem("tape-measure", "BMI", member.bmi ? member.bmi.toFixed(1) : "N/A")}
+            </View>
+
+            {/* Membership Details Card */}
+            <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
+              <View style={styles.cardHeader}>
+                <MaterialCommunityIcons name="card-account-details" size={20} color={colors.primary} />
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Membership</Text>
+              </View>
+              
+              {renderDetailItem("account-cash", "Plan", member.membershipPlan)}
+              {renderDetailItem("clock", "Batch", member.batch)}
+              {renderDetailItem("calendar", "Joined", new Date(member.joiningDate).toLocaleDateString())}
+              {renderDetailItem("calendar-month", "Subscription", `${member.monthsOfSubscription} months`)}
+              {renderDetailItem("cash", "Fees", member.fees ? `₹${member.fees}` : "N/A")}
+            </View>
+          </Animatable.View>
+        ) : (
+          <Animatable.View 
+            animation="fadeInUp"
+            duration={800}
+            style={[styles.attendanceContainer, { backgroundColor: colors.cardBackground }]}
+          >
+            <AttendanceCalendar memberId={id} />
+          </Animatable.View>
+        )}
+      </ScrollView>
+    </Animated.View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#1A1A1A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2D2D2D',
+  },
+  headerButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  scrollContainer: {
+    paddingBottom: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 18,
+    marginTop: 16,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 16,
+    gap: 8,
+  },
+  retryText: {
+    color: 'white',
+    fontWeight: '500',
+  },
+  profileCard: {
+    borderRadius: 12,
+    margin: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  profileTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  photo: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginRight: 16,
+    borderWidth: 2,
+    borderColor: '#1E88E5',
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  name: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 6,
+  },
+  daysRemaining: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  profileMeta: {
+    borderTopWidth: 1,
+    borderTopColor: '#2D2D2D',
+    paddingTop: 12,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  metaText: {
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  tabButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 8,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  contentContainer: {
+    paddingHorizontal: 16,
+  },
+  card: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2D2D2D',
+    paddingBottom: 12,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  detailIcon: {
+    marginRight: 12,
+    width: 24,
+    textAlign: 'center',
+  },
+  detailLabel: {
+    fontSize: 14,
+    width: 100,
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+  },
+  attendanceContainer: {
+    borderRadius: 12,
+    marginHorizontal: 16,
+    padding: 16,
+    minHeight: 300,
+  },
+});
+
+export default MemberDetailScreen;
