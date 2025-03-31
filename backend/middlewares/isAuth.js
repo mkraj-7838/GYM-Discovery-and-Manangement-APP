@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import User from "../models/UserSchema.js";
 
 const isAuthenticated = async (req, res, next) => {
   try {
@@ -11,15 +12,16 @@ const isAuthenticated = async (req, res, next) => {
     const token = req.headers.authorization.split(" ")[1];
 
     //! Verify token
-    jwt.verify(token, process.env.JWT_SECRET || "defaultSecret", (err, decoded) => {
-      if (err) {
-        throw new Error("Invalid or expired token, please login again");
-      }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "defaultSecret");
 
-      //! Save user ID in request object
-      req.user = decoded.id;
-      next();
-    });
+    const user = await User.findById(decoded.id).select("-password");
+    if (!user) {
+      throw new Error("User not found in database");
+    }
+
+    req.user = user; // Attach full user object
+    next();
+
   } catch (error) {
     next(error);
   }

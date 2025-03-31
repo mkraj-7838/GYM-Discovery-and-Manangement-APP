@@ -7,135 +7,274 @@ import {
   StyleSheet,
   Modal,
   RefreshControl,
+  Animated,
+  Easing,
+  Dimensions,
+  Alert
 } from "react-native";
-import Icon from "react-native-vector-icons/FontAwesome"; // For check icons
-import { useNavigation } from "@react-navigation/native"; // For navigation
-import * as Animatable from "react-native-animatable"; // For animations
+import { useNavigation } from "@react-navigation/native";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import * as Animatable from "react-native-animatable";
 
-// Membership Plans Data
+const { width } = Dimensions.get('window');
+
+// Enhanced Membership Plans Data
 const MEMBERSHIP_PLANS = {
   BASIC: {
     name: "Basic",
     price: 29.99,
     benefits: [
-      "Basic gym access",
-      "Limited hours (6AM-8PM)",
-      "Access to basic equipment",
+      { text: "Basic gym access", icon: "dumbbell" },
+      { text: "Limited hours (6AM-8PM)", icon: "clock-outline" },
+      { text: "Access to basic equipment", icon: "weight-lifter" },
+      { text: "Locker access", icon: "locker" },
+      { text: "Free WiFi", icon: "wifi" }
     ],
-    color: "#808080", // Gray
+    color: "#6b7280", // Cool gray
+    icon: "silverware-fork-knife",
+    gradient: ["#4b5563", "#374151"]
   },
   PREMIUM: {
     name: "Premium",
     price: 49.99,
     benefits: [
-      "Unlimited gym access",
-      "24/7 access",
-      "Free fitness classes",
-      "Personal trainer consultation (1/month)",
-      "Access to premium equipment",
+      { text: "Unlimited gym access", icon: "infinity" },
+      { text: "24/7 access", icon: "clock-check-outline" },
+      { text: "Free fitness classes", icon: "yoga" },
+      { text: "Personal trainer (1/month)", icon: "account-star" },
+      { text: "Premium equipment", icon: "weight" },
+      { text: "Sauna access", icon: "hot-tub" },
+      { text: "Nutrition guide", icon: "food-apple" }
     ],
-    color: "#1A73E8", // Razorpay blue
+    color: "#3b82f6", // Blue-500
+    icon: "star-circle",
+    gradient: ["#2563eb", "#1d4ed8"]
   },
   VIP: {
     name: "VIP",
     price: 89.99,
     benefits: [
-      "Unlimited gym access",
-      "24/7 access",
-      "Unlimited fitness classes",
-      "Weekly personal trainer sessions",
-      "Access to all equipment",
-      "Spa access",
-      "Nutritional counseling",
+      { text: "Unlimited gym access", icon: "crown" },
+      { text: "24/7 VIP access", icon: "shield-account" },
+      { text: "Unlimited classes", icon: "calendar-multiple" },
+      { text: "Weekly trainer sessions", icon: "account-supervisor" },
+      { text: "All equipment", icon: "weight-lifter" },
+      { text: "Spa & massage", icon: "spa" },
+      { text: "Nutritionist sessions", icon: "food-variant" },
+      { text: "Guest passes", icon: "account-multiple-plus" },
+      { text: "Priority booking", icon: "priority-high" }
     ],
-    color: "#FFD700", // Gold
-  },
+    color: "#f59e0b", // Amber-500
+    icon: "crown-outline",
+    gradient: ["#d97706", "#b45309"]
+  }
 };
 
 const MembershipPlans = () => {
   const navigation = useNavigation();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [selectedPlan, setSelectedPlan] = useState("PREMIUM");
   const [processingPayment, setProcessingPayment] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [animation] = useState(new Animated.Value(0));
 
-  // Handle plan selection
+  const animateButton = () => {
+    animation.setValue(0);
+    Animated.timing(animation, {
+      toValue: 1,
+      duration: 300,
+      easing: Easing.linear,
+      useNativeDriver: true
+    }).start();
+  };
+
   const handleUpgrade = (planKey) => {
-    setSelectedPlan(planKey);
+    animateButton();
     setProcessingPayment(true);
-    // Simulate payment processing
+    
     setTimeout(() => {
       setProcessingPayment(false);
       setShowUpgradeModal(false);
-      Alert.alert("Success", `You have upgraded to the ${MEMBERSHIP_PLANS[planKey].name} plan!`);
+      Alert.alert(
+        "Membership Upgraded!",
+        `You're now a ${MEMBERSHIP_PLANS[planKey].name} member. Enjoy your new benefits!`,
+        [{ text: "OK", onPress: () => navigation.goBack() }]
+      );
     }, 2000);
   };
 
-  // Pull-to-refresh handler
   const onRefresh = () => {
     setRefreshing(true);
-    // Simulate fetching new data
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    setTimeout(() => setRefreshing(false), 1000);
+  };
+
+  const scaleInterpolate = animation.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [1, 1.05, 1]
+  });
+
+  const animatedStyle = {
+    transform: [{ scale: scaleInterpolate }]
   };
 
   return (
     <View style={styles.container}>
-      {/* Back Arrow */}
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-        <Icon name="arrow-left" size={24} color="#FFFFFF" />
-      </TouchableOpacity>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          style={styles.backButton}
+          activeOpacity={0.7}
+        >
+          <Icon name="chevron-left" size={32} color="#f3f4f6" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Choose Your Plan</Text>
+        <View style={{ width: 32 }} /> {/* Spacer */}
+      </View>
 
       {/* Membership Plans List */}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#1A73E8"]} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            tintColor="#3b82f6"
+            colors={["#3b82f6"]}
+          />
         }
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Membership Plans</Text>
+        <Animatable.Text 
+          animation="fadeInDown" 
+          duration={800}
+          style={styles.title}
+        >
+          Elevate Your Fitness Journey
+        </Animatable.Text>
+        
+        <Text style={styles.subtitle}>
+          Select the membership that fits your goals and lifestyle
+        </Text>
+
         {Object.entries(MEMBERSHIP_PLANS).map(([key, plan]) => (
           <Animatable.View
             key={key}
             animation="fadeInUp"
             duration={800}
-            delay={parseInt(key) * 200}
-            style={[styles.planCard, { borderColor: plan.color }]}
+            delay={parseInt(key) * 150}
+            style={[
+              styles.planCard, 
+              { 
+                borderLeftWidth: 4,
+                borderLeftColor: plan.color,
+                backgroundColor: '#1f2937',
+                shadowColor: plan.color,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.2,
+                shadowRadius: 8,
+                elevation: 6
+              }
+            ]}
           >
-            <Text style={[styles.planName, { color: plan.color }]}>{plan.name}</Text>
-            <Text style={styles.planPrice}>${plan.price}/month</Text>
+            <View style={styles.planHeader}>
+              <Icon 
+                name={plan.icon} 
+                size={28} 
+                color={plan.color} 
+                style={styles.planIcon}
+              />
+              <View>
+                <Text style={[styles.planName, { color: plan.color }]}>
+                  {plan.name}
+                </Text>
+                <Text style={styles.planPrice}>
+                  ${plan.price}<Text style={styles.perMonth}>/month</Text>
+                </Text>
+              </View>
+            </View>
+
             <View style={styles.benefitsContainer}>
               {plan.benefits.map((benefit, index) => (
                 <View key={index} style={styles.benefitItem}>
-                  <Icon name="check" size={16} color={plan.color} />
-                  <Text style={styles.benefitText}>{benefit}</Text>
+                  <Icon 
+                    name={benefit.icon} 
+                    size={20} 
+                    color={plan.color} 
+                    style={{ marginRight: 12 }}
+                  />
+                  <Text style={styles.benefitText}>{benefit.text}</Text>
                 </View>
               ))}
             </View>
+
             <TouchableOpacity
-              style={[styles.selectButton, { borderColor: plan.color }]}
+              style={[
+                styles.selectButton, 
+                { 
+                  backgroundColor: plan.color,
+                  shadowColor: plan.color,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.4,
+                  shadowRadius: 4,
+                  elevation: 4
+                }
+              ]}
               onPress={() => {
                 setSelectedPlan(key);
                 setShowUpgradeModal(true);
               }}
+              activeOpacity={0.8}
             >
-              <Text style={[styles.selectButtonText, { color: plan.color }]}>Select Plan</Text>
+              <Text style={styles.selectButtonText}>
+                Choose {plan.name}
+              </Text>
             </TouchableOpacity>
           </Animatable.View>
         ))}
+
+        <View style={styles.infoBox}>
+          <Icon name="information-outline" size={24} color="#3b82f6" />
+          <Text style={styles.infoText}>
+            All plans include a 7-day free trial. Cancel anytime.
+          </Text>
+        </View>
       </ScrollView>
 
-      {/* Upgrade Button at Bottom */}
+      {/* Floating Upgrade Button */}
       {selectedPlan && (
-        <TouchableOpacity
-          style={[styles.upgradeButton, { backgroundColor: MEMBERSHIP_PLANS[selectedPlan].color }]}
-          onPress={() => setShowUpgradeModal(true)}
+        <Animated.View 
+          style={[
+            styles.upgradeButtonContainer,
+            animatedStyle
+          ]}
         >
-          <Text style={styles.upgradeButtonText}>
-            Upgrade to {MEMBERSHIP_PLANS[selectedPlan].name}
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.upgradeButton, 
+              { 
+                backgroundColor: MEMBERSHIP_PLANS[selectedPlan].color,
+                shadowColor: MEMBERSHIP_PLANS[selectedPlan].color,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 6
+              }
+            ]}
+            onPress={() => setShowUpgradeModal(true)}
+            activeOpacity={0.8}
+          >
+            <Icon 
+              name="arrow-up" 
+              size={22} 
+              color="#fff" 
+              style={{ marginRight: 8 }} 
+            />
+            <Text style={styles.upgradeButtonText}>
+              Upgrade to {MEMBERSHIP_PLANS[selectedPlan].name}
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
       )}
 
       {/* Upgrade Modal */}
@@ -147,38 +286,90 @@ const MembershipPlans = () => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <ScrollView contentContainerStyle={styles.modalScrollContent}>
-              <Text style={styles.modalTitle}>Confirm Your Plan</Text>
+            <TouchableOpacity 
+              style={styles.modalCloseButton}
+              onPress={() => setShowUpgradeModal(false)}
+            >
+              <Icon name="close" size={24} color="#9ca3af" />
+            </TouchableOpacity>
+
+            <ScrollView 
+              contentContainerStyle={styles.modalScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.modalHeader}>
+                <Icon 
+                  name={MEMBERSHIP_PLANS[selectedPlan]?.icon} 
+                  size={40} 
+                  color={MEMBERSHIP_PLANS[selectedPlan]?.color} 
+                />
+                <Text style={styles.modalTitle}>
+                  Confirm {MEMBERSHIP_PLANS[selectedPlan]?.name} Membership
+                </Text>
+              </View>
+
               <View style={styles.selectedPlanContainer}>
-                <Text style={[styles.planName, { color: MEMBERSHIP_PLANS[selectedPlan]?.color }]}>
-                  {MEMBERSHIP_PLANS[selectedPlan]?.name}
-                </Text>
-                <Text style={styles.planPrice}>
-                  ${MEMBERSHIP_PLANS[selectedPlan]?.price}/month
-                </Text>
-                <View style={styles.benefitsContainer}>
+                <View style={styles.priceContainer}>
+                  <Text style={styles.modalPrice}>
+                    ${MEMBERSHIP_PLANS[selectedPlan]?.price}
+                  </Text>
+                  <Text style={styles.perMonth}>/month</Text>
+                </View>
+
+                <View style={styles.modalBenefitsContainer}>
                   {MEMBERSHIP_PLANS[selectedPlan]?.benefits.map((benefit, index) => (
-                    <View key={index} style={styles.benefitItem}>
-                      <Icon name="check" size={16} color={MEMBERSHIP_PLANS[selectedPlan]?.color} />
-                      <Text style={styles.benefitText}>{benefit}</Text>
+                    <View key={index} style={styles.modalBenefitItem}>
+                      <Icon 
+                        name={benefit.icon} 
+                        size={20} 
+                        color={MEMBERSHIP_PLANS[selectedPlan]?.color} 
+                        style={{ marginRight: 12 }}
+                      />
+                      <Text style={styles.modalBenefitText}>{benefit.text}</Text>
                     </View>
                   ))}
                 </View>
               </View>
+
+              <View style={styles.paymentMethod}>
+                <Text style={styles.paymentTitle}>Payment Method</Text>
+                <View style={styles.cardPreview}>
+                  <Icon name="credit-card" size={24} color="#9ca3af" />
+                  <Text style={styles.cardText}>•••• •••• •••• 4242</Text>
+                  <Icon name="chevron-down" size={20} color="#9ca3af" />
+                </View>
+              </View>
+
+              <Animated.View style={animatedStyle}>
+                <TouchableOpacity
+                  style={[
+                    styles.confirmButton,
+                    { backgroundColor: MEMBERSHIP_PLANS[selectedPlan]?.color }
+                  ]}
+                  onPress={() => handleUpgrade(selectedPlan)}
+                  disabled={processingPayment}
+                  activeOpacity={0.8}
+                >
+                  {processingPayment ? (
+                    <>
+                      <Icon name="loading" size={20} color="#fff" style={styles.spinner} />
+                      <Text style={styles.confirmButtonText}>Processing...</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Icon name="check-circle" size={20} color="#fff" style={{ marginRight: 8 }} />
+                      <Text style={styles.confirmButtonText}>Confirm & Pay</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </Animated.View>
+
               <TouchableOpacity
-                style={styles.confirmButton}
-                onPress={() => handleUpgrade(selectedPlan)}
-                disabled={processingPayment}
-              >
-                <Text style={styles.confirmButtonText}>
-                  {processingPayment ? "Processing..." : "Confirm Upgrade"}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.closeButton}
+                style={styles.cancelButton}
                 onPress={() => setShowUpgradeModal(false)}
+                activeOpacity={0.7}
               >
-                <Text style={styles.closeButtonText}>Close</Text>
+                <Text style={styles.cancelButtonText}>Not Now</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -188,135 +379,243 @@ const MembershipPlans = () => {
   );
 };
 
-// Styles
+// Enhanced Dark Theme Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A2540", // Dark blue background
+    backgroundColor: "#111827", // Dark slate background
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 20,
+    paddingTop: 50,
+    backgroundColor: '#111827',
   },
   backButton: {
-    position: "absolute",
-    top: 40,
-    left: 20,
-    zIndex: 1,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#f3f4f6',
   },
   scrollContent: {
-    paddingTop: 60, // Space for back button
-    paddingBottom: 100, // Space for upgrade button
+    paddingHorizontal: 20,
+    paddingBottom: 120,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#FFFFFF", // White text
-    textAlign: "center",
-    marginBottom: 30,
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#f9fafb',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#9ca3af',
+    textAlign: 'center',
+    marginBottom: 32,
   },
   planCard: {
-    backgroundColor: "#1E3A5F", // Slightly lighter dark blue
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 16,
+    padding: 24,
     marginBottom: 20,
-    borderWidth: 2,
+    overflow: 'hidden',
+  },
+  planHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  planIcon: {
+    marginRight: 16,
   },
   planName: {
-    fontSize: 24,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 10,
+    fontSize: 22,
+    fontWeight: '700',
   },
   planPrice: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#FFFFFF", // White text
-    textAlign: "center",
-    marginBottom: 20,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#f9fafb',
+  },
+  perMonth: {
+    fontSize: 16,
+    color: '#9ca3af',
+    fontWeight: '400',
   },
   benefitsContainer: {
-    marginBottom: 20,
+    marginVertical: 16,
   },
   benefitItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingVertical: 4,
   },
   benefitText: {
-    fontSize: 16,
-    color: "#FFFFFF", // White text
-    marginLeft: 10,
+    fontSize: 15,
+    color: '#e5e7eb',
+    flex: 1,
   },
   selectButton: {
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 2,
-    alignItems: "center",
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    flexDirection: 'row',
   },
   selectButtonText: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: '600',
+    color: '#fff',
   },
-  upgradeButton: {
-    position: "absolute",
-    bottom: 20,
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#93c5fd',
+    marginLeft: 12,
+    flex: 1,
+  },
+  upgradeButtonContainer: {
+    position: 'absolute',
+    bottom: 30,
     left: 20,
     right: 20,
-    padding: 15,
-    borderRadius: 10,
-    alignItems: "center",
+  },
+  upgradeButton: {
+    padding: 18,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
   },
   upgradeButtonText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#FFFFFF", // White text
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#fff',
   },
   modalOverlay: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent overlay
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    width: "90%",
-    backgroundColor: "#0A2540", // Dark blue background
-    borderRadius: 20,
-    padding: 20,
-    maxHeight: "80%",
+    backgroundColor: '#1f2937',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '85%',
+  },
+  modalCloseButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 1,
+    padding: 8,
   },
   modalScrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
   },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#FFFFFF", // White text
-    textAlign: "center",
-    marginBottom: 20,
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#f9fafb',
+    textAlign: 'center',
+    marginTop: 16,
   },
   selectedPlanContainer: {
-    marginBottom: 20,
+    marginBottom: 24,
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  modalPrice: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#f9fafb',
+  },
+  modalBenefitsContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  modalBenefitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  modalBenefitText: {
+    fontSize: 15,
+    color: '#e5e7eb',
+    flex: 1,
+  },
+  paymentMethod: {
+    marginBottom: 24,
+  },
+  paymentTitle: {
+    fontSize: 16,
+    color: '#9ca3af',
+    marginBottom: 12,
+  },
+  cardPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    padding: 16,
+    borderRadius: 12,
+  },
+  cardText: {
+    fontSize: 16,
+    color: '#e5e7eb',
+    flex: 1,
+    marginHorizontal: 12,
   },
   confirmButton: {
-    padding: 15,
-    backgroundColor: "#34A853", // Green for confirm button
-    borderRadius: 10,
-    alignItems: "center",
-    marginBottom: 10,
+    padding: 18,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    marginBottom: 16,
   },
   confirmButtonText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#FFFFFF", // White text
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#fff',
   },
-  closeButton: {
-    padding: 15,
-    backgroundColor: "#DC3545", // Red for close button
-    borderRadius: 10,
-    alignItems: "center",
+  spinner: {
+    marginRight: 8,
   },
-  closeButtonText: {
+  cancelButton: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: "#FFFFFF", // White text
+    color: '#9ca3af',
+    fontWeight: '500',
   },
 });
 

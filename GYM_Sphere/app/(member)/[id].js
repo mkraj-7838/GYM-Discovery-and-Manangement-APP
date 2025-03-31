@@ -10,7 +10,8 @@ import {
   TouchableOpacity,
   Alert,
   Dimensions,
-  RefreshControl
+  RefreshControl,
+  Linking
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { 
@@ -36,6 +37,7 @@ const MemberDetailScreen = () => {
   const [activeTab, setActiveTab] = useState('details');
   const [refreshing, setRefreshing] = useState(false);
   const fadeAnim = useState(new Animated.Value(0))[0];
+  const [bmi, setBmi] = useState(null);
 
   // Enhanced dark theme colors
   const colors = {
@@ -69,6 +71,13 @@ const MemberDetailScreen = () => {
     return diffDays;
   };
 
+  const calculateBmi = (weight, height) => {
+    if (!weight || !height) return null;
+    // Convert height from cm to meters
+    const heightInMeters = height / 100;
+    return (weight / (heightInMeters * heightInMeters)).toFixed(1);
+  };
+
   const fetchMemberDetails = async () => {
     try {
       setIsLoading(true);
@@ -82,6 +91,11 @@ const MemberDetailScreen = () => {
           data.monthsOfSubscription
         );
         setRemainingDays(days);
+      }
+
+      // Calculate BMI if height and weight are available
+      if (data.height && data.weight) {
+        setBmi(calculateBmi(data.weight, data.height));
       }
     } catch (error) {
       console.error("Error fetching member details:", error);
@@ -145,6 +159,34 @@ const MemberDetailScreen = () => {
     fetchMemberDetails();
   };
 
+  const handlePhonePress = (phone) => {
+    if (!phone) return;
+    
+    Alert.alert(
+      "Contact Member",
+      `Call or message ${member.name}?`,
+      [
+        {
+          text: "Call",
+          onPress: () => Linking.openURL(`tel:${phone}`)
+        },
+        {
+          text: "WhatsApp",
+          onPress: () => Linking.openURL(`https://wa.me/${phone}`)
+        },
+        {
+          text: "Cancel",
+          style: "cancel"
+        }
+      ]
+    );
+  };
+
+  const handleEmailPress = (email) => {
+    if (!email) return;
+    Linking.openURL(`mailto:${email}`);
+  };
+
   if (isLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
@@ -193,11 +235,34 @@ const MemberDetailScreen = () => {
     }
   }
 
-  const renderDetailItem = (iconName, label, value, iconColor = colors.text) => (
+  const renderDetailItem = (iconName, label, value, iconColor = colors.text, isPressable = false, onPress = null) => (
     <View style={styles.detailRow}>
       <MaterialCommunityIcons name={iconName} size={20} color={iconColor} style={styles.detailIcon} />
       <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>{label}:</Text>
-      <Text style={[styles.detailValue, { color: colors.text }]}>{value || "N/A"}</Text>
+      {isPressable ? (
+        <TouchableOpacity onPress={onPress}>
+          <Text style={[styles.detailValue, { color: colors.primary }]}>{value || "N/A"}</Text>
+        </TouchableOpacity>
+      ) : (
+        <Text style={[styles.detailValue, { color: colors.text }]}>{value || "N/A"}</Text>
+      )}
+    </View>
+  );
+
+  const renderContactItem = (iconName, label, value, actionIcon, onPress) => (
+    <View style={styles.contactRow}>
+      <View style={styles.contactInfo}>
+        <MaterialCommunityIcons name={iconName} size={20} color={colors.text} style={styles.detailIcon} />
+        <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>{label}:</Text>
+        <TouchableOpacity onPress={onPress}>
+          <Text style={[styles.detailValue, { color: colors.primary }]}>{value || "N/A"}</Text>
+        </TouchableOpacity>
+      </View>
+      {value && (
+        <TouchableOpacity onPress={onPress} style={styles.actionIcon}>
+          <MaterialCommunityIcons name={actionIcon} size={24} color={colors.primary} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -275,14 +340,20 @@ const MemberDetailScreen = () => {
           </View>
 
           <View style={styles.profileMeta}>
-            <View style={styles.metaItem}>
-              <MaterialIcons name="phone" size={16} color={colors.textSecondary} />
-              <Text style={[styles.metaText, { color: colors.text }]}>{member.phone || "No phone"}</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <MaterialIcons name="email" size={16} color={colors.textSecondary} />
-              <Text style={[styles.metaText, { color: colors.text }]}>{member.email || "No email"}</Text>
-            </View>
+            {renderContactItem(
+              "phone", 
+              "Phone", 
+              member.phone, 
+              "whatsapp", 
+              () => handlePhonePress(member.phone)
+            )}
+            {renderContactItem(
+              "email", 
+              "Email", 
+              member.email, 
+              "email-send", 
+              () => handleEmailPress(member.email)
+            )}
           </View>
         </Animatable.View>
 
@@ -296,6 +367,7 @@ const MemberDetailScreen = () => {
                 : { backgroundColor: colors.tabInactive }
             ]}
             onPress={() => setActiveTab('details')}
+            activeOpacity={0.7}
           >
             <MaterialIcons 
               name="info" 
@@ -318,6 +390,7 @@ const MemberDetailScreen = () => {
                 : { backgroundColor: colors.tabInactive }
             ]}
             onPress={() => setActiveTab('attendance')}
+            activeOpacity={0.7}
           >
             <MaterialCommunityIcons 
               name="calendar-check" 
@@ -362,7 +435,23 @@ const MemberDetailScreen = () => {
               
               {renderDetailItem("weight-kilogram", "Weight", `${member.weight} kg`)}
               {renderDetailItem("human-male-height", "Height", `${member.height} cm`)}
-              {renderDetailItem("tape-measure", "BMI", member.bmi ? member.bmi.toFixed(1) : "N/A")}
+              {renderDetailItem("tape-measure", "BMI", bmi || "N/A")}
+              {bmi && (
+                <View style={styles.bmiIndicator}>
+                  <Text style={[styles.bmiText, { color: colors.textSecondary }]}>
+                    BMI Category: {getBmiCategory(bmi)}
+                  </Text>
+                  <View style={styles.bmiBarContainer}>
+                    <View style={[
+                      styles.bmiBar, 
+                      { 
+                        width: `${Math.min(100, (parseFloat(bmi) / 40 * 100))}%`,
+                        backgroundColor: getBmiColor(bmi)
+                      }
+                    ]} />
+                  </View>
+                </View>
+              )}
             </View>
 
             {/* Membership Details Card */}
@@ -391,6 +480,23 @@ const MemberDetailScreen = () => {
       </ScrollView>
     </Animated.View>
   );
+};
+
+// Helper functions for BMI
+const getBmiCategory = (bmi) => {
+  const bmiValue = parseFloat(bmi);
+  if (bmiValue < 18.5) return "Underweight";
+  if (bmiValue >= 18.5 && bmiValue < 25) return "Normal";
+  if (bmiValue >= 25 && bmiValue < 30) return "Overweight";
+  return "Obese";
+};
+
+const getBmiColor = (bmi) => {
+  const bmiValue = parseFloat(bmi);
+  if (bmiValue < 18.5) return "#FFC107"; // Yellow for underweight
+  if (bmiValue >= 18.5 && bmiValue < 25) return "#4CAF50"; // Green for normal
+  if (bmiValue >= 25 && bmiValue < 30) return "#FF9800"; // Orange for overweight
+  return "#F44336"; // Red for obese
 };
 
 const styles = StyleSheet.create({
@@ -502,14 +608,20 @@ const styles = StyleSheet.create({
     borderTopColor: '#2D2D2D',
     paddingTop: 12,
   },
-  metaItem: {
+  contactRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
-  metaText: {
-    fontSize: 14,
+  contactInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  actionIcon: {
     marginLeft: 8,
+    padding: 4,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -574,6 +686,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     flex: 1,
+  },
+  bmiIndicator: {
+    marginTop: 12,
+  },
+  bmiText: {
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  bmiBarContainer: {
+    height: 6,
+    backgroundColor: '#2D2D2D',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginTop: 4,
+  },
+  bmiBar: {
+    height: '100%',
+    borderRadius: 3,
   },
   attendanceContainer: {
     borderRadius: 12,

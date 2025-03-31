@@ -82,6 +82,52 @@ const userCtrl = {
 
     res.json(user);
   }),
+
+  updateProfile: asyncHandler(async (req, res) => {
+    const {
+      name,
+      gymName,
+      photo,
+      phone,
+      address,
+      membershipPlans,
+      certifications,
+    } = req.body;
+
+    // Find the user by ID from the authenticated request
+    const user = await User.findById(req.user); // No ._id needed
+
+    if (!user) {
+      res.status(404);
+      throw new Error("User not found");
+    }
+
+    // Update only the fields that are provided in the request
+    if (name) user.name = name;
+    if (gymName) user.gymName = gymName;
+    if (photo) user.photo = photo;
+    if (phone) user.phone = phone;
+    if (address) user.address = address;
+    if (membershipPlans) user.membershipPlans = membershipPlans;
+    if (certifications) user.certifications = certifications;
+
+    // Save the updated user
+    const updatedUser = await user.save();
+
+    // Return the updated user (excluding password)
+    res.json({
+      id: updatedUser._id,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      gymName: updatedUser.gymName,
+      photo: updatedUser.photo,
+      phone: updatedUser.phone,
+      address: updatedUser.address,
+      membershipPlans: updatedUser.membershipPlans,
+      certifications: updatedUser.certifications,
+      message: "Profile updated successfully",
+    });
+  }),
 };
 
 export default userCtrl;

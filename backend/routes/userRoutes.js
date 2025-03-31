@@ -9,6 +9,7 @@ const router = express.Router();
 router.post("/register", userCtrl.register);
 router.post("/login", userCtrl.login);
 router.get("/profile", isAuthenticated, userCtrl.profile);
+router.patch("/profile", isAuthenticated, userCtrl.updateProfile);
 
 router.post("/maintenance", async (req, res) => {
     try {

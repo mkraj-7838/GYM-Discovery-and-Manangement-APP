@@ -70,24 +70,31 @@ const DashboardScreen = () => {
     {
       id: "5",
       title: "Feedback",
-      icon: <MaterialIcons name="feedback" size={32} color="#00BCD4" />,
+      icon: <MaterialIcons name="feedback" size={32} color="#01BC04" />,
       color: colors.cardBackground,
       route: "/(tabs)/feedback",
     },
     {
       id: "6",
       title: "Membership Plans",
-      icon: <MaterialCommunityIcons name="card-account-details" size={32} color="#4CAF50" />,
+      icon: <MaterialCommunityIcons name="card-account-details" size={32} color="#4bAF50" />,
       color: colors.cardBackground,
       route: "/(tools)/MemberShipPlans",
     },
     {
       id: "7",
-      title: "Payments",
-      icon: <FontAwesome name="money" size={32} color="#FFD700" />,
+      title: "Stats",
+      icon: <MaterialCommunityIcons name="chart-scatter-plot" size={32} color="#0cc2f5" />,
       color: colors.cardBackground,
-      route: "/(tabs)/payment-history",
+      route: "/(tools)/GymStats",
     },
+    {
+      id: "8",
+      title: "Certifications",
+      icon: <FontAwesome name="graduation-cap" size={32} color="#FFD700" />,
+      color: colors.cardBackground,
+      route: "/(tools)/certifications",
+    }
   ];
 
   useEffect(() => {

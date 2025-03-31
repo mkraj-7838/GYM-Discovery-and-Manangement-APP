@@ -16,11 +16,13 @@ app.use(express.json({ limit: "10mb" })); // ✅ Increase JSON payload limit
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(cors());
 import attendanceRoutes from "./routes/attendanceRoutes.js";
+import certification from "./routes/certification.js";
 
 app.use('/api/attendance', attendanceRoutes);
 
 app.use("/api/user", userRoutes);
 app.use("/api/user/members", memberRoutes);
+app.use("/api/user/certifications", certification);
 
 
 mongoose

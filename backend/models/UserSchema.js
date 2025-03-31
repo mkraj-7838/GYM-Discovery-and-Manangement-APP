@@ -10,7 +10,8 @@ const UserSchema = new mongoose.Schema(
     phone: { type: String },
     address: { type: String },
     members: [{ type: mongoose.Schema.Types.ObjectId, ref: "Member" }], // Optional
-    membershipPlans: [{ type: mongoose.Schema.Types.ObjectId, ref: "MembershipPlan" }]
+    membershipPlans: [{ type: mongoose.Schema.Types.ObjectId, ref: "MembershipPlan" }],
+    certifications:[{type: mongoose.Schema.Types.ObjectId, ref: "Certification"}]
   },
   {
     timestamps: true,
