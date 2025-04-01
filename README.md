@@ -3,7 +3,7 @@
 ## 📌 Overview  
 The **Gym Management and Discovery App** is a comprehensive platform that streamlines **gym operations** while enhancing user engagement. Inspired by platforms like **Zomato** and **Swiggy**, it allows users to **discover gyms, manage memberships, and track attendance** effortlessly.  
 
-This app serves **two primary user roles**:  
+This app serves ** user roles**:  
 - 🔹 **Admin** – Manages gym operations, members, pricing,Tracks attendance, and updates.  
  
 
