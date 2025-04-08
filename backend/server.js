@@ -17,9 +17,14 @@ app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(cors());
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import certification from "./routes/certification.js";
+import complaintsRoutes from "./routes/complaintsRoutes.js";
+import feedbackRoutes from "./routes/feedbackRoutes.js";
+import membershipPlanRoutes from "./routes/membershipPlanRoutes.js"
 
+app.use('/api/membership-plans', membershipPlanRoutes);
 app.use('/api/attendance', attendanceRoutes);
-
+app.use('/api/complaints', complaintsRoutes);
+app.use('/api/feedback', feedbackRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/user/members", memberRoutes);
 app.use("/api/user/certifications", certification);

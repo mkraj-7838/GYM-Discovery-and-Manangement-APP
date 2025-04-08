@@ -1,5 +1,6 @@
 import express from "express";
 import Member from "../models/Member.js";
+import MemberForm from "../models/MemberForm.js"
 import isAuthenticated from "../middlewares/isAuth.js";
 import { addMember, getMembersByUser } from "../controller/memberController.js";
 import { ObjectId } from 'mongodb';
@@ -7,40 +8,88 @@ import { ObjectId } from 'mongodb';
 const router = express.Router();
 
 router.post("/", isAuthenticated, addMember); // Add a new member (linked to user)
+
 router.get("/", isAuthenticated, getMembersByUser); // Get members added by logged-in user
 
-router.get("/member-stats", async (req, res) => {
+
+router.post("/form-member", async (req, res) => {
   try {
-    const activeCount = await Member.countDocuments({ status: "active" });
-    const inactiveCount = await Member.countDocuments({ status: "inactive" });
-    const trialCount = await Member.countDocuments({ status: "trial" });
-    
-    const basicCount = await Member.countDocuments({ membershipPlan: "basic" });
-    const premiumCount = await Member.countDocuments({
-      membershipPlan: "premium",
-    });
-    const vipCount = await Member.countDocuments({ membershipPlan: "vip" });
-
-    const stats = {
-      memberStatus: {
-        active: activeCount,
-        inactive: inactiveCount,
-        trial: trialCount,
-      },
-      membershipPlans: {
-        basic: basicCount,
-        premium: premiumCount,
-        vip: vipCount,
-      },
-    };
-
-    console.log("✅ Member Stats Fetched:", stats); // ✅ Debugging log
-    res.json(stats);
-  } catch (err) {
-    console.error("❌ Error Fetching Member Stats:", err);
-    res.status(500).json({ error: "Failed to fetch member stats" });
+      const memberData = req.body;
+      
+      // Convert joiningDate string to Date object
+      memberData.joiningDate = new Date(memberData.joiningDate);
+      
+      // Create new member
+      const member = new MemberForm(memberData);
+      await member.save();
+      
+      res.status(201).json({ 
+          success: true,
+          message: 'Member added successfully',
+          data: member
+      });
+  } catch (error) {
+      console.error('Error adding member:', error);
+      res.status(500).json({ 
+          success: false,
+          message: error.message || 'Error adding member'
+      });
   }
 });
+
+router.post('/form-member/search', async (req, res) => {
+  try {
+    const { phone } = req.body;
+    
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is required in the request body'
+      });
+    }
+
+    const member = await MemberForm.findOne({ 
+      phone: { $regex: new RegExp(`^${phone}$`, 'i') } 
+    });
+
+    if (!member) {
+      return res.status(404).json({
+        success: false,
+        message: 'Member not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: member
+    });
+
+  } catch (error) {
+    console.error('Error fetching member by phone:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error fetching member'
+    });
+  }
+});
+
+router.get('/form-member', async (req, res) => {
+  try {
+      const members = await MemberForm.find().sort({ createdAt: -1 });
+      res.json({ 
+          success: true,
+          data: members
+      });
+  } catch (error) {
+      console.error('Error fetching members:', error);
+      res.status(500).json({ 
+          success: false,
+          message: 'Error fetching members'
+      });
+  }
+});
+
+
 
 // ✅ Get Member by ID
 router.get("/:id", async (req, res) => {

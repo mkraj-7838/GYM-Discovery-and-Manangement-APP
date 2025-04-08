@@ -72,7 +72,7 @@ const DashboardScreen = () => {
       title: "Feedback",
       icon: <MaterialIcons name="feedback" size={32} color="#01BC04" />,
       color: colors.cardBackground,
-      route: "/(tabs)/feedback",
+      route: "/(tools)/FeedbackScreen",
     },
     {
       id: "6",
@@ -94,6 +94,13 @@ const DashboardScreen = () => {
       icon: <FontAwesome name="graduation-cap" size={32} color="#FFD700" />,
       color: colors.cardBackground,
       route: "/(tools)/certifications",
+    },
+    {
+      id: "9",
+      title: "Complaints",
+      icon: <FontAwesome name="envelope" size={32} color="#FF0000" />,
+      color: colors.cardBackground,
+      route: "/(tools)/complaints",
     }
   ];
 

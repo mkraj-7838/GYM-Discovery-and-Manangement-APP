@@ -10,21 +10,25 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Modal,
+  Pressable,
 } from "react-native";
 import { useRouter } from "expo-router";
 import AddMemberScreen from "../../components/add-member";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Animatable from "react-native-animatable";
-import { 
-  Ionicons, 
-  MaterialIcons, 
-  FontAwesome, 
-  Feather, 
+import {
+  Ionicons,
+  MaterialIcons,
+  FontAwesome,
+  Feather,
   MaterialCommunityIcons,
-  AntDesign 
-} from '@expo/vector-icons';
+  AntDesign,
+} from "@expo/vector-icons";
+import SearchMemberScreen from "../../components/FormSearch";
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:3000/api";
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:3000/api";
 
 const AllMembersScreen = () => {
   const router = useRouter();
@@ -32,9 +36,12 @@ const AllMembersScreen = () => {
   const [filterType, setFilterType] = useState("all");
   const [members, setMembers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showAddMember, setShowAddMember] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedMember, setExpandedMember] = useState(null);
+
+  const [showAddOptions, setShowAddOptions] = useState(false);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
 
   // Enhanced dark theme color palette
   const colors = {
@@ -46,10 +53,10 @@ const AllMembersScreen = () => {
     textSecondary: "#9E9E9E",
     cardBackground: "#1E1E1E",
     inputBackground: "#2D2D2D",
-    active: "#4CAF50",       // Green for active
-    warning: "#FFC107",      // Yellow for warning
-    inactive: "#F44336",     // Red for inactive
-    trial: "#9C27B0",       // Purple for trial
+    active: "#4CAF50", // Green for active
+    warning: "#FFC107", // Yellow for warning
+    inactive: "#F44336", // Red for inactive
+    trial: "#9C27B0", // Purple for trial
     selectedFilter: "#1E88E5", // Blue for selected filter
     border: "#333333",
     shadow: "#000000",
@@ -95,10 +102,14 @@ const AllMembersScreen = () => {
   };
 
   const getRemainingDays = (member) => {
-    if (!member.joiningDate || !member.monthsOfSubscription || member.status !== "active") {
+    if (
+      !member.joiningDate ||
+      !member.monthsOfSubscription ||
+      member.status !== "active"
+    ) {
       return null;
     }
-    
+
     const joinDate = new Date(member.joiningDate);
     const endDate = new Date(joinDate);
     endDate.setMonth(joinDate.getMonth() + member.monthsOfSubscription);
@@ -110,7 +121,7 @@ const AllMembersScreen = () => {
   const getStatusColor = (member) => {
     if (member.status === "inactive") return colors.inactive;
     if (member.status === "trial") return colors.trial;
-    
+
     const remainingDays = getRemainingDays(member);
     if (remainingDays !== null && remainingDays <= 10) {
       return colors.warning;
@@ -121,7 +132,7 @@ const AllMembersScreen = () => {
   const getStatusIcon = (member) => {
     if (member.status === "inactive") return "close-circle";
     if (member.status === "trial") return "timer";
-    
+
     const remainingDays = getRemainingDays(member);
     if (remainingDays !== null && remainingDays <= 10) {
       return "alert-circle";
@@ -132,7 +143,7 @@ const AllMembersScreen = () => {
   const filteredMembers = members.filter(
     (member) =>
       (member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.phone?.toLowerCase().includes(searchQuery.toLowerCase())) &&
+        member.phone?.toLowerCase().includes(searchQuery.toLowerCase())) &&
       (filterType === "all" || member.status === filterType)
   );
 
@@ -143,16 +154,34 @@ const AllMembersScreen = () => {
   if (showAddMember) {
     return <AddMemberScreen onClose={() => setShowAddMember(false)} />;
   }
+  if (showQRScanner) {
+    return <SearchMemberScreen onClose={() => setShowQRScanner(false)} />;
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header with search */}
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>
-          <MaterialCommunityIcons name="account-group" size={24} color={colors.primary} /> Member Directory
+          <MaterialCommunityIcons
+            name="account-group"
+            size={24}
+            color={colors.primary}
+          />{" "}
+          Member Directory
         </Text>
-        <View style={[styles.searchContainer, { backgroundColor: colors.inputBackground }]}>
-          <Feather name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
+        <View
+          style={[
+            styles.searchContainer,
+            { backgroundColor: colors.inputBackground },
+          ]}
+        >
+          <Feather
+            name="search"
+            size={20}
+            color={colors.textSecondary}
+            style={styles.searchIcon}
+          />
           <TextInput
             style={[styles.input, { color: colors.text }]}
             placeholder="Search members..."
@@ -162,7 +191,11 @@ const AllMembersScreen = () => {
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+              <Ionicons
+                name="close-circle"
+                size={20}
+                color={colors.textSecondary}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -180,22 +213,35 @@ const AllMembersScreen = () => {
             key={filter.type}
             style={[
               styles.filterButton,
-              filterType === filter.type 
-                ? { backgroundColor: colors.selectedFilter, borderColor: colors.primary }
-                : { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              filterType === filter.type
+                ? {
+                    backgroundColor: colors.selectedFilter,
+                    borderColor: colors.primary,
+                  }
+                : {
+                    backgroundColor: colors.cardBackground,
+                    borderColor: colors.border,
+                  },
             ]}
             onPress={() => setFilterType(filter.type)}
           >
-            <Ionicons 
-              name={filter.icon} 
-              size={18} 
-              color={filterType === filter.type ? colors.secondary : colors.text} 
+            <Ionicons
+              name={filter.icon}
+              size={18}
+              color={
+                filterType === filter.type ? colors.secondary : colors.text
+              }
               style={styles.filterIcon}
             />
-            <Text style={[
-              styles.filterText, 
-              { color: filterType === filter.type ? colors.secondary : colors.text }
-            ]}>
+            <Text
+              style={[
+                styles.filterText,
+                {
+                  color:
+                    filterType === filter.type ? colors.secondary : colors.text,
+                },
+              ]}
+            >
               {filter.label}
             </Text>
           </TouchableOpacity>
@@ -204,17 +250,65 @@ const AllMembersScreen = () => {
 
       {/* Add member button */}
       <TouchableOpacity
-        style={[styles.addButton, { backgroundColor: colors.primary }]}
-        onPress={() => setShowAddMember(true)}
+        style={[
+          styles.addButton,
+          { backgroundColor: "#1f1f1f", borderColor: "#444", borderWidth: 1 },
+        ]}
+        onPress={() => setShowAddOptions(true)}
       >
-        <AntDesign name="adduser" size={20} color={colors.secondary} />
-        <Text style={[styles.addButtonText, { color: colors.secondary }]}>Add New Member</Text>
+        <AntDesign name="adduser" size={20} color="#00FFFF" />
+        <Text style={[styles.addButtonText, { color: "#00FFFF" }]}>
+          Add New Member
+        </Text>
       </TouchableOpacity>
+
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showAddOptions}
+        onRequestClose={() => setShowAddOptions(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.optionBox}>
+            <Text style={styles.modalTitle}>Choose Option</Text>
+
+            <Pressable
+              style={styles.optionButton}
+              onPress={() => {
+                setShowAddOptions(false);
+                setShowAddMember(true);
+              }}
+            >
+              <MaterialIcons name="keyboard" size={22} color="#fff" />
+              <Text style={styles.optionText}>Add Manually</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.optionButton}
+              onPress={() => {
+                setShowAddOptions(false);
+                setShowQRScanner(true);
+              }}
+            >
+              <AntDesign name="qrcode" size={22} color="#fff" />
+              <Text style={styles.optionText}>Scan QR Code</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setShowAddOptions(false)}
+              style={styles.cancelButton}
+            >
+              <Text style={{ color: "#aaa" }}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       {/* Member count */}
       <View style={styles.memberCountContainer}>
         <Text style={[styles.memberCountText, { color: colors.textSecondary }]}>
-          Showing {filteredMembers.length} {filteredMembers.length === 1 ? 'member' : 'members'}
+          Showing {filteredMembers.length}{" "}
+          {filteredMembers.length === 1 ? "member" : "members"}
         </Text>
       </View>
 
@@ -222,14 +316,24 @@ const AllMembersScreen = () => {
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.text }]}>Loading members...</Text>
+          <Text style={[styles.loadingText, { color: colors.text }]}>
+            Loading members...
+          </Text>
         </View>
       ) : filteredMembers.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <MaterialIcons name="people-outline" size={60} color={colors.textSecondary} />
-          <Text style={[styles.emptyText, { color: colors.text }]}>No members found</Text>
+          <MaterialIcons
+            name="people-outline"
+            size={60}
+            color={colors.textSecondary}
+          />
+          <Text style={[styles.emptyText, { color: colors.text }]}>
+            No members found
+          </Text>
           <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
-            {searchQuery ? 'Try a different search' : 'Add a new member to get started'}
+            {searchQuery
+              ? "Try a different search"
+              : "Add a new member to get started"}
           </Text>
         </View>
       ) : (
@@ -241,7 +345,7 @@ const AllMembersScreen = () => {
             const statusColor = getStatusColor(item);
             const statusIcon = getStatusIcon(item);
             const isExpanded = expandedMember === item._id;
-            
+
             return (
               <Animatable.View
                 animation="fadeInUp"
@@ -251,12 +355,12 @@ const AllMembersScreen = () => {
               >
                 <TouchableOpacity
                   style={[
-                    styles.memberItem, 
-                    { 
+                    styles.memberItem,
+                    {
                       backgroundColor: colors.cardBackground,
                       borderColor: colors.border,
                       shadowColor: colors.shadow,
-                    }
+                    },
                   ]}
                   onPress={() => toggleMemberExpand(item._id)}
                   activeOpacity={0.8}
@@ -266,39 +370,68 @@ const AllMembersScreen = () => {
                       source={{
                         uri: item.photo
                           ? item.photo
-                          : `https://api.dicebear.com/7.x/initials/png?seed=${encodeURIComponent(item.name)}&size=100`,
+                          : `https://api.dicebear.com/7.x/initials/png?seed=${encodeURIComponent(
+                              item.name
+                            )}&size=100`,
                       }}
                       style={styles.memberPhoto}
                       onError={() => console.log("Error loading member photo")}
                     />
 
                     <View style={styles.memberInfo}>
-                      <Text style={[styles.memberName, { color: colors.text }]} numberOfLines={1}>
+                      <Text
+                        style={[styles.memberName, { color: colors.text }]}
+                        numberOfLines={1}
+                      >
                         {item.name}
                       </Text>
                       <View style={styles.memberMeta}>
-                        <MaterialIcons name="phone" size={14} color={colors.textSecondary} />
-                        <Text style={[styles.memberPhone, { color: colors.textSecondary }]}>
+                        <MaterialIcons
+                          name="phone"
+                          size={14}
+                          color={colors.textSecondary}
+                        />
+                        <Text
+                          style={[
+                            styles.memberPhone,
+                            { color: colors.textSecondary },
+                          ]}
+                        >
                           {item.phone || "No phone"}
                         </Text>
                       </View>
                       <View style={styles.memberMeta}>
-                        <MaterialCommunityIcons name="calendar" size={14} color={colors.textSecondary} />
-                        <Text style={[styles.memberDate, { color: colors.textSecondary }]}>
-                          Joined: {new Date(item.joiningDate).toLocaleDateString()}
+                        <MaterialCommunityIcons
+                          name="calendar"
+                          size={14}
+                          color={colors.textSecondary}
+                        />
+                        <Text
+                          style={[
+                            styles.memberDate,
+                            { color: colors.textSecondary },
+                          ]}
+                        >
+                          Joined:{" "}
+                          {new Date(item.joiningDate).toLocaleDateString()}
                         </Text>
                       </View>
                     </View>
 
                     <View style={styles.statusContainer}>
-                      <Ionicons 
-                        name={statusIcon} 
-                        size={24} 
-                        color={statusColor} 
+                      <Ionicons
+                        name={statusIcon}
+                        size={24}
+                        color={statusColor}
                         style={styles.statusIcon}
                       />
                       {remainingDays !== null && remainingDays <= 10 && (
-                        <Text style={[styles.daysRemaining, { color: colors.warning }]}>
+                        <Text
+                          style={[
+                            styles.daysRemaining,
+                            { color: colors.warning },
+                          ]}
+                        >
                           {remainingDays}d
                         </Text>
                       )}
@@ -306,47 +439,88 @@ const AllMembersScreen = () => {
                   </View>
 
                   {isExpanded && (
-                    <Animatable.View 
+                    <Animatable.View
                       animation="fadeIn"
                       duration={300}
                       style={styles.expandedContent}
                     >
                       <View style={styles.expandedRow}>
                         <View style={styles.detailItem}>
-                          <MaterialCommunityIcons name="weight-lifter" size={16} color={colors.textSecondary} />
-                          <Text style={[styles.detailText, { color: colors.text }]}>
+                          <MaterialCommunityIcons
+                            name="weight-lifter"
+                            size={16}
+                            color={colors.textSecondary}
+                          />
+                          <Text
+                            style={[styles.detailText, { color: colors.text }]}
+                          >
                             {item.batch || "No batch"}
                           </Text>
                         </View>
                         <View style={styles.detailItem}>
-                          <MaterialCommunityIcons name="card-account-details" size={16} color={colors.textSecondary} />
-                          <Text style={[styles.detailText, { color: colors.text }]}>
+                          <MaterialCommunityIcons
+                            name="card-account-details"
+                            size={16}
+                            color={colors.textSecondary}
+                          />
+                          <Text
+                            style={[styles.detailText, { color: colors.text }]}
+                          >
                             {item.membershipPlan || "No plan"}
                           </Text>
                         </View>
                       </View>
                       <View style={styles.expandedRow}>
                         <View style={styles.detailItem}>
-                          <MaterialCommunityIcons name="calendar-clock" size={16} color={colors.textSecondary} />
-                          <Text style={[styles.detailText, { color: colors.text }]}>
+                          <MaterialCommunityIcons
+                            name="calendar-clock"
+                            size={16}
+                            color={colors.textSecondary}
+                          />
+                          <Text
+                            style={[styles.detailText, { color: colors.text }]}
+                          >
                             {item.monthsOfSubscription || "0"} months
                           </Text>
                         </View>
                         <View style={styles.detailItem}>
-                          <MaterialCommunityIcons name="cash" size={16} color={colors.textSecondary} />
-                          <Text style={[styles.detailText, { color: colors.text }]}>
+                          <MaterialCommunityIcons
+                            name="cash"
+                            size={16}
+                            color={colors.textSecondary}
+                          />
+                          <Text
+                            style={[styles.detailText, { color: colors.text }]}
+                          >
                             ₹{item.fees || "0"}
                           </Text>
                         </View>
                       </View>
                       <TouchableOpacity
-                        style={[styles.viewDetailsButton, { backgroundColor: colors.primary }]}
-                        onPress={() => router.push({ pathname: "/(member)/[id]", params: { id: item._id } })}
+                        style={[
+                          styles.viewDetailsButton,
+                          { backgroundColor: colors.primary },
+                        ]}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/(member)/[id]",
+                            params: { id: item._id },
+                          })
+                        }
                       >
-                        <Text style={[styles.viewDetailsText, { color: colors.secondary }]}>
+                        <Text
+                          style={[
+                            styles.viewDetailsText,
+                            { color: colors.secondary },
+                          ]}
+                        >
                           View Full Details
                         </Text>
-                        <Feather name="chevron-right" size={16} color={colors.secondary} />
+                        <Feather
+                          name="chevron-right"
+                          size={16}
+                          color={colors.secondary}
+                        />
                       </TouchableOpacity>
                     </Animatable.View>
                   )}
@@ -370,21 +544,21 @@ const AllMembersScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     padding: 16,
   },
   header: {
     marginBottom: 16,
   },
-  title: { 
-    fontSize: 24, 
-    fontWeight: "bold", 
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
     marginBottom: 16,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -397,17 +571,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingVertical: 4,
   },
-  filterContainer: { 
-    flexDirection: "row", 
-    justifyContent: "space-between", 
+  filterContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 16,
     gap: 8,
   },
-  filterButton: { 
+  filterButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
@@ -415,26 +589,79 @@ const styles = StyleSheet.create({
   filterIcon: {
     marginRight: 6,
   },
-  filterText: { 
+  filterText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
-  addButton: { 
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12, 
-    borderRadius: 8, 
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 12,
+    borderRadius: 8,
     marginBottom: 16,
     gap: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
   },
-  addButtonText: { 
-    fontSize: 16, 
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 10,
+    justifyContent: "center",
+    marginTop: 10,
+  },
+  addButtonText: {
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  optionBox: {
+    width: 280,
+    backgroundColor: "#1e1e1e",
+    borderRadius: 12,
+    padding: 20,
+    alignItems: "center",
+    borderColor: "#333",
+    borderWidth: 1,
+  },
+  modalTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 20,
+  },
+  optionButton: {
+    backgroundColor: "#2a2a2a",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    marginBottom: 12,
+    width: "100",
+    justifyContent: "center",
+  },
+  optionText: {
+    color: "#fff",
+    marginLeft: 10,
+    fontSize: 16,
+  },
+  cancelButton: {
+    marginTop: 10,
+  },
+  addButtonText: {
+    fontSize: 16,
     fontWeight: "500",
   },
   memberCountContainer: {
@@ -448,15 +675,15 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 2,
   },
   memberMainContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   memberPhoto: {
     width: 56,
@@ -473,8 +700,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   memberMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 2,
   },
   memberPhone: {
@@ -486,7 +713,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   statusContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginLeft: 8,
   },
   statusIcon: {
@@ -494,22 +721,22 @@ const styles = StyleSheet.create({
   },
   daysRemaining: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   expandedContent: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#333',
+    borderTopColor: "#333",
   },
   expandedRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 8,
   },
   detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   detailText: {
@@ -517,22 +744,22 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   viewDetailsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 10,
     borderRadius: 8,
     marginTop: 8,
   },
   viewDetailsText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     marginRight: 4,
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     marginTop: 12,
@@ -540,19 +767,19 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 40,
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: '500',
+    fontWeight: "500",
     marginTop: 16,
   },
   emptySubText: {
     fontSize: 14,
     marginTop: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   listContentContainer: {
     paddingBottom: 20,

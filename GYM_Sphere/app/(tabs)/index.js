@@ -439,11 +439,7 @@ const WelcomePage = () => {
           <Text style={styles.statValue}>{gymStats.activeMembers}</Text>
           <Text style={styles.statLabel}>Active Members</Text>
         </View>
-        <View style={styles.statItem}>
-          <MaterialIcons name="fitness-center" size={20} color="#2196F3" />
-          <Text style={styles.statValue}>{gymStats.trainers}</Text>
-          <Text style={styles.statLabel}>Trainers</Text>
-        </View>
+        
         <View style={styles.statItem}>
           <FontAwesome5 name="calendar-check" size={20} color="#E91E63" />
           <Text style={styles.statValue}>{gymStats.attendanceRate}</Text>
