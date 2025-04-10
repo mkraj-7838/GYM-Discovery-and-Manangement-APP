@@ -107,7 +107,7 @@ const DashboardScreen = () => {
   useEffect(() => {
     Animated.timing(animation, {
       toValue: 1,
-      duration: 1000,
+      duration: 500,
       easing: Easing.out(Easing.ease),
       useNativeDriver: true,
     }).start();
@@ -117,7 +117,7 @@ const DashboardScreen = () => {
     <Animatable.View
       key={box.id}
       animation="fadeInUp"
-      duration={800}
+      duration={400}
       delay={parseInt(box.id) * 150}
       style={styles.boxContainer}
     >

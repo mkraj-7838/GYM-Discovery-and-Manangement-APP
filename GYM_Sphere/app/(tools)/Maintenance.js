@@ -11,7 +11,7 @@ import {
   Animated,
   Easing,
 } from "react-native";
-import { TextInput, Button, Divider, Chip } from "react-native-paper";
+import { TextInput, Button } from "react-native-paper";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSelector } from "react-redux";
@@ -24,21 +24,21 @@ const API_BASE_URL =
 
 // Enhanced Dark Theme Colors
 const themeColors = {
-  primary: "#6366F1",       // Indigo-500
-  primaryDark: "#4338CA",   // Indigo-700
-  background: "#111827",    // Gray-900
-  surface: "#1F2937",       // Gray-800
-  surfaceLight: "#374151",  // Gray-700
-  accent: "#818CF8",        // Indigo-400
-  text: "#F3F4F6",         // Gray-100
-  secondaryText: "#9CA3AF", // Gray-400
-  error: "#EF4444",        // Red-500
-  success: "#10B981",      // Emerald-500
-  warning: "#F59E0B",      // Amber-500
-  info: "#3B82F6",        // Blue-500
+  primary: "#6366F1",       // Indigo-500 (buttons, accents)
+  primaryDark: "#4338CA",   // Indigo-700 (button pressed state)
+  background: "#121212",    // Darker background for better contrast
+  surface: "#1E1E1E",       // Card backgrounds
+  surfaceLight: "#2D2D2D",  // Input backgrounds
+  accent: "#818CF8",        // Indigo-400 (icons, highlights)
+  text: "#FFFFFF",          // Primary text (pure white for best readability)
+  secondaryText: "#B0B0B0", // Secondary text (softer white)
+  error: "#EF4444",         // Red-500 (errors)
+  success: "#10B981",       // Emerald-500 (success)
+  warning: "#F59E0B",       // Amber-500 (warnings)
+  info: "#3B82F6",         // Blue-500 (information)
 };
 
-// API Service Functions (same as before)
+// API Service Functions
 const createMaintenanceReport = async (reportData, token) => {
   const response = await axios.post(`${API_BASE_URL}/user/maintenance`, reportData, {
     headers: {
@@ -89,7 +89,6 @@ export default function MaintenanceScreen() {
   const [formData, setFormData] = useState({
     description: "",
     cost: "",
-    priority: "medium", // Added priority field
   });
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -175,13 +174,12 @@ export default function MaintenanceScreen() {
           userId: user.id,
           description: formData.description,
           cost: parseFloat(formData.cost) || 0,
-          priority: formData.priority,
         },
         token
       );
 
       await fetchReports();
-      setFormData({ description: "", cost: "", priority: "medium" });
+      setFormData({ description: "", cost: "" });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Success", "Report submitted successfully");
     } catch (err) {
@@ -225,24 +223,6 @@ export default function MaintenanceScreen() {
   const clearError = () => {
     setError(null);
     Haptics.selectionAsync();
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case "high": return themeColors.error;
-      case "medium": return themeColors.warning;
-      case "low": return themeColors.success;
-      default: return themeColors.secondaryText;
-    }
-  };
-
-  const getPriorityIcon = (priority) => {
-    switch (priority) {
-      case "high": return "alert-circle";
-      case "medium": return "alert";
-      case "low": return "chevron-up";
-      default: return "information";
-    }
   };
 
   return (
@@ -334,12 +314,11 @@ export default function MaintenanceScreen() {
             placeholderTextColor={themeColors.secondaryText}
             multiline
             numberOfLines={3}
-            style={[styles.input, { textAlignVertical: "top" }]}
+            style={[styles.input, { color: "#ffffff" }, { textAlignVertical: "top" }]}
             theme={{
               colors: {
                 primary: themeColors.accent,
                 background: themeColors.surface,
-                text: themeColors.text,
                 placeholder: themeColors.secondaryText,
                 label: themeColors.secondaryText,
               },
@@ -368,52 +347,6 @@ export default function MaintenanceScreen() {
             }}
             left={<TextInput.Icon name="currency-inr" color={themeColors.secondaryText} />}
           />
-
-          <View style={styles.priorityContainer}>
-            <Text style={[styles.priorityLabel, { color: themeColors.secondaryText }]}>
-              Priority:
-            </Text>
-            <View style={styles.priorityButtons}>
-              {["high", "medium", "low"].map((level) => (
-                <TouchableOpacity
-                  key={level}
-                  style={[
-                    styles.priorityButton,
-                    formData.priority === level && {
-                      backgroundColor: getPriorityColor(level),
-                      borderColor: getPriorityColor(level),
-                    },
-                  ]}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    handleChange("priority", level);
-                  }}
-                >
-                  <MaterialCommunityIcons
-                    name={getPriorityIcon(level)}
-                    size={16}
-                    color={
-                      formData.priority === level 
-                        ? themeColors.text 
-                        : getPriorityColor(level)
-                    }
-                  />
-                  <Text 
-                    style={[
-                      styles.priorityButtonText,
-                      { 
-                        color: formData.priority === level 
-                          ? themeColors.text 
-                          : getPriorityColor(level),
-                      }
-                    ]}
-                  >
-                    {level.charAt(0).toUpperCase() + level.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
 
           <Button
             mode="contained"
@@ -491,8 +424,6 @@ export default function MaintenanceScreen() {
                   styles.reportCard, 
                   { 
                     backgroundColor: themeColors.surface,
-                    borderLeftWidth: 4,
-                    borderLeftColor: getPriorityColor(report.priority || "medium"),
                   }
                 ]}
               >
@@ -539,20 +470,6 @@ export default function MaintenanceScreen() {
 
                 {expandedReportId === report._id && (
                   <Animated.View style={styles.reportDetails}>
-                    <View style={styles.detailRow}>
-                      <MaterialCommunityIcons
-                        name={getPriorityIcon(report.priority || "medium")}
-                        size={16}
-                        color={getPriorityColor(report.priority || "medium")}
-                      />
-                      <Text style={[styles.detailText, { color: themeColors.secondaryText }]}>
-                        Priority:{" "}
-                        <Text style={{ color: getPriorityColor(report.priority || "medium") }}>
-                          {report.priority || "medium"}
-                        </Text>
-                      </Text>
-                    </View>
-                    
                     {report.status && (
                       <View style={styles.detailRow}>
                         <MaterialCommunityIcons
@@ -795,34 +712,5 @@ const styles = StyleSheet.create({
   emptySubtext: {
     marginTop: 4,
     fontSize: 14,
-  },
-  priorityContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  priorityLabel: {
-    marginRight: 12,
-    fontSize: 14,
-  },
-  priorityButtons: {
-    flexDirection: "row",
-    gap: 8,
-    flex: 1,
-  },
-  priorityButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: themeColors.surfaceLight,
-    gap: 6,
-  },
-  priorityButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
   },
 });

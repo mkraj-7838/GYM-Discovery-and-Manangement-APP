@@ -651,13 +651,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   statusPending: {
-    backgroundColor: 'rgba(255, 152, 0, 0.2)',
+    backgroundColor: 'rgb(255, 213, 0)',
   },
   statusReviewed: {
-    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+    backgroundColor: 'rgb(1, 255, 9)',
   },
   statusArchived: {
-    backgroundColor: 'rgba(158, 158, 158, 0.2)',
+    backgroundColor: 'rgb(249, 158, 0)',
   },
   statusText: {
     fontSize: 12,

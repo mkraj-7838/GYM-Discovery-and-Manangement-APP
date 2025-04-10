@@ -183,7 +183,7 @@ const AllMembersScreen = () => {
             style={styles.searchIcon}
           />
           <TextInput
-            style={[styles.input, { color: colors.text }]}
+            style={[styles.input, { color: "#ffffff" }]}
             placeholder="Search members..."
             placeholderTextColor={colors.textSecondary}
             value={searchQuery}
@@ -252,12 +252,12 @@ const AllMembersScreen = () => {
       <TouchableOpacity
         style={[
           styles.addButton,
-          { backgroundColor: "#1f1f1f", borderColor: "#444", borderWidth: 1 },
+          { backgroundColor: "#1E88E5", borderColor: "#444" },
         ]}
         onPress={() => setShowAddOptions(true)}
       >
-        <AntDesign name="adduser" size={20} color="#00FFFF" />
-        <Text style={[styles.addButtonText, { color: "#00FFFF" }]}>
+        <AntDesign name="adduser" size={20} color="#FFFFFF" />
+        <Text style={[styles.addButtonText, { color: "#FFFFFF" }]}>
           Add New Member
         </Text>
       </TouchableOpacity>
@@ -291,7 +291,7 @@ const AllMembersScreen = () => {
               }}
             >
               <AntDesign name="qrcode" size={22} color="#fff" />
-              <Text style={styles.optionText}>Scan QR Code</Text>
+              <Text style={styles.optionText}>by Member Form</Text>
             </Pressable>
 
             <Pressable
@@ -607,18 +607,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 10,
-    justifyContent: "center",
-    marginTop: 10,
-  },
+  
   addButtonText: {
     marginLeft: 8,
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 18,
+    fontWeight: "800",
   },
   modalOverlay: {
     flex: 1,
@@ -649,7 +642,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     borderRadius: 8,
     marginBottom: 12,
-    width: "100",
+    width: "220",
     justifyContent: "center",
   },
   optionText: {

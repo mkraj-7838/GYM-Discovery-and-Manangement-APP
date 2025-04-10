@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -10,33 +10,32 @@ import {
   ScrollView, 
   RefreshControl, 
   ActivityIndicator,
-  Animated,
   Platform,
   Alert
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import * as Animatable from 'react-native-animatable';
+import { useNavigation } from "@react-navigation/native";
+
 import { Picker } from '@react-native-picker/picker';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:3000/api";
 
-// Color options for plans
-const PLAN_COLORS = [
-  { name: 'Emerald', value: '#10b981' },
-  { name: 'Sapphire', value: '#3b82f6' },
-  { name: 'Ruby', value: '#ef4444' },
-  { name: 'Amber', value: '#f59e0b' },
-  { name: 'Violet', value: '#8b5cf6' },
-  { name: 'Rose', value: '#f43f5e' },
-  { name: 'Sky', value: '#0ea5e9' },
-  { name: 'Lime', value: '#84cc16' },
-  { name: 'Gold', value: '#eab308' },
-  { name: 'Silver', value: '#94a3b8' },
+// Simplified color options
+const COLOR_OPTIONS = [
+  '#10b981', // Emerald
+  '#3b82f6', // Sapphire
+  '#ef4444', // Ruby
+  '#f59e0b', // Amber
+  '#8b5cf6', // Violet
+  '#f43f5e', // Rose
+  '#0ea5e9', // Sky
+  '#84cc16', // Lime
+  '#eab308', // Gold
+  '#94a3b8', // Silver
 ];
 
-// Icon options for plans
-const availableIcons = [
+const ICON_OPTIONS = [
   'crown',
   'diamond-stone',
   'star',
@@ -46,91 +45,69 @@ const availableIcons = [
   'rocket',
   'lightning-bolt',
   'fire',
-  'account-supervisor',
-  'account-group',
-  'chess-queen',
-  'gift',
-  'heart',
-  'hexagon',
+  'account-supervisor'
 ];
 
-const MembershipPlansScreen = ({ navigation }) => {
+const MembershipPlansScreen = () => {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [currentPlan, setCurrentPlan] = useState(null);
   const [token, setToken] = useState(null);
-  const buttonScale = useRef(new Animated.Value(1)).current;
+
+  const navigation = useNavigation();
+
 
   // Form state
   const [formData, setFormData] = useState({
     name: '',
     price: '',
-    color: PLAN_COLORS[0].value,
-    icon: availableIcons[0],
+    color: COLOR_OPTIONS[0],
+    icon: ICON_OPTIONS[0],
     features: [{ name: '', included: true }],
   });
 
-  // Animation for button press
-  const animateButton = () => {
-    Animated.sequence([
-      Animated.timing(buttonScale, {
-        toValue: 0.95,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(buttonScale, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
-  const animatedStyle = {
-    transform: [{ scale: buttonScale }],
-  };
-
-  // Reset form to default values
+  // Reset form
   const resetForm = () => {
     setFormData({
       name: '',
       price: '',
-      color: PLAN_COLORS[0].value,
-      icon: availableIcons[0],
+      color: COLOR_OPTIONS[0],
+      icon: ICON_OPTIONS[0],
       features: [{ name: '', included: true }],
     });
     setCurrentPlan(null);
   };
 
-  // Fetch token from AsyncStorage
+  
+
+  // Fetch token and plans
   useEffect(() => {
-    const getToken = async () => {
+    const fetchToken = async () => {
       const storedToken = await AsyncStorage.getItem('token');
       setToken(storedToken);
-      if (storedToken) {
-        fetchPlans();
-      }
     };
-    getToken();
+    fetchToken();
   }, []);
 
-  // Fetch all plans for the user
+  useEffect(() => {
+    if (token) {
+      fetchPlans();
+    }
+  }, [token]);
+
+  
+
   const fetchPlans = async () => {
     try {
       setLoading(true);
       const response = await fetch(`${API_BASE_URL}/membership-plans`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
       });
       const data = await response.json();
-      if (data.success) {
-        setPlans(data.data);
-      }
+      if (data.success) setPlans(data.data);
     } catch (error) {
-      console.error('Error fetching plans:', error);
       Alert.alert('Error', 'Failed to fetch plans');
     } finally {
       setLoading(false);
@@ -138,13 +115,11 @@ const MembershipPlansScreen = ({ navigation }) => {
     }
   };
 
-  // Handle refresh
   const onRefresh = () => {
     setRefreshing(true);
     fetchPlans();
   };
 
-  // Add a new feature field
   const addFeature = () => {
     setFormData({
       ...formData,
@@ -152,21 +127,20 @@ const MembershipPlansScreen = ({ navigation }) => {
     });
   };
 
-  // Update a feature
   const updateFeature = (index, field, value) => {
     const updatedFeatures = [...formData.features];
     updatedFeatures[index][field] = value;
     setFormData({ ...formData, features: updatedFeatures });
   };
 
-  // Remove a feature
   const removeFeature = (index) => {
-    const updatedFeatures = [...formData.features];
-    updatedFeatures.splice(index, 1);
-    setFormData({ ...formData, features: updatedFeatures });
+    if (formData.features.length > 1) {
+      const updatedFeatures = [...formData.features];
+      updatedFeatures.splice(index, 1);
+      setFormData({ ...formData, features: updatedFeatures });
+    }
   };
 
-  // Edit an existing plan
   const editPlan = (plan) => {
     setCurrentPlan(plan);
     setFormData({
@@ -179,56 +153,36 @@ const MembershipPlansScreen = ({ navigation }) => {
     setShowPlanModal(true);
   };
 
-  // Delete a plan
   const deletePlan = async (id) => {
     Alert.alert(
       'Delete Plan',
-      'Are you sure you want to delete this plan?',
+      'Are you sure?',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
           style: 'destructive',
           onPress: async () => {
             try {
               const response = await fetch(`${API_BASE_URL}/membership-plans/${id}`, {
                 method: 'DELETE',
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                },
+                headers: { 'Authorization': `Bearer ${token}` },
               });
               const data = await response.json();
-              if (data.success) {
-                fetchPlans();
-              }
+              if (data.success) fetchPlans();
             } catch (error) {
-              console.error('Error deleting plan:', error);
               Alert.alert('Error', 'Failed to delete plan');
             }
-          },
+          }
         },
       ]
     );
   };
 
-  // Save or update a plan
   const savePlan = async () => {
-    // Validate form
-    if (!formData.name.trim()) {
-      Alert.alert('Error', 'Plan name is required');
-      return;
-    }
-    if (!formData.price || isNaN(formData.price)) {
-      Alert.alert('Error', 'Price must be a valid number');
-      return;
-    }
-    if (formData.features.some(f => !f.name.trim())) {
-      Alert.alert('Error', 'All features must have a name');
-      return;
-    }
+    if (!formData.name.trim()) return Alert.alert('Error', 'Plan name is required');
+    if (!formData.price || isNaN(formData.price)) return Alert.alert('Error', 'Valid price required');
+    if (formData.features.some(f => !f.name.trim())) return Alert.alert('Error', 'All features need names');
 
     try {
       const planData = {
@@ -242,90 +196,58 @@ const MembershipPlansScreen = ({ navigation }) => {
         })),
       };
 
-      let response;
-      if (currentPlan) {
-        // Update existing plan
-        response = await fetch(`${API_BASE_URL}/membership-plans/${currentPlan._id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify(planData),
-        });
-      } else {
-        // Create new plan
-        response = await fetch(`${API_BASE_URL}/membership-plans`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify(planData),
-        });
-      }
+      const url = currentPlan 
+        ? `${API_BASE_URL}/membership-plans/${currentPlan._id}`
+        : `${API_BASE_URL}/membership-plans`;
+        
+      const method = currentPlan ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(planData),
+      });
 
       const data = await response.json();
       if (data.success) {
         setShowPlanModal(false);
         fetchPlans();
       } else {
-        Alert.alert('Error', data.error || 'Failed to save plan');
+        Alert.alert('Error', data.error || 'Failed to save');
       }
     } catch (error) {
-      console.error('Error saving plan:', error);
       Alert.alert('Error', 'Failed to save plan');
     }
   };
 
-  // Render plan card
   const renderPlanCard = ({ item }) => (
-    <Animatable.View 
-      animation="fadeInUp"
-      duration={800}
-      style={[
-        styles.planCard, 
-        { 
-          borderWidth: 4, // Add border
-        borderColor: `${item.color}50`, // 50% opacity of the color
+    <View style={[
+      styles.planCard, 
+      { 
+        borderLeftWidth: 6,
+        borderLeftColor: item.color,
         backgroundColor: '#1a1a1a',
-        shadowColor: item.color,
-        elevation: 6,
-        }
-      ]}
-    >
-      <View style={[
-      styles.colorStrip,
-      { backgroundColor: item.color }
-    ]} />
-      
+      }
+    ]}>
       <View style={styles.planHeader}>
-        <Icon 
-          name={item.icon} 
-          size={28} 
-          color={item.color} 
-          style={styles.planIcon}
-        />
+        <Icon name={item.icon} size={28} color={item.color} />
         <View style={styles.planTitleContainer}>
           <Text style={[styles.planName, { color: item.color }]}>
             {item.name}
           </Text>
           <Text style={styles.planPrice}>
-            ${item.price}<Text style={styles.perMonth}>/month</Text>
+            Rs.{item.price}<Text style={styles.perMonth}>/month</Text>
           </Text>
         </View>
         
         <View style={styles.planActions}>
-          <TouchableOpacity
-            onPress={() => editPlan(item)}
-            style={[styles.actionButton, { backgroundColor: 'rgba(59, 130, 246, 0.2)' }]}
-          >
+          <TouchableOpacity onPress={() => editPlan(item)} style={styles.editButton}>
             <Icon name="pencil" size={18} color="#3b82f6" />
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => deletePlan(item._id)}
-            style={[styles.actionButton, { backgroundColor: 'rgba(239, 68, 68, 0.2)' }]}
-          >
+          <TouchableOpacity onPress={() => deletePlan(item._id)} style={styles.deleteButton}>
             <Icon name="trash-can" size={18} color="#ef4444" />
           </TouchableOpacity>
         </View>
@@ -335,27 +257,22 @@ const MembershipPlansScreen = ({ navigation }) => {
         {item.features.map((feature, index) => (
           <View key={index} style={styles.benefitItem}>
             <Icon 
-              name={feature.included ? 'check-circle' : 'close-circle'} 
+              name={feature.included ? 'check' : 'close'} 
               size={20} 
               color={feature.included ? item.color : '#666'} 
-              style={{ marginRight: 12 }}
             />
             <Text style={styles.benefitText}>{feature.name}</Text>
           </View>
         ))}
       </View>
-    </Animatable.View>
+    </View>
   );
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()} 
-          style={styles.backButton}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="chevron-left" size={32} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Membership Plans</Text>
@@ -365,13 +282,12 @@ const MembershipPlansScreen = ({ navigation }) => {
             setShowPlanModal(true);
           }}
           style={styles.addButton}
-          activeOpacity={0.7}
         >
           <Icon name="plus" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      {/* Plans List */}
+      {/* Content */}
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#3b82f6" />
@@ -380,7 +296,15 @@ const MembershipPlansScreen = ({ navigation }) => {
         <View style={styles.emptyContainer}>
           <Icon name="clipboard-text" size={60} color="#444" />
           <Text style={styles.emptyText}>No plans created yet</Text>
-          <Text style={styles.emptySubtext}>Tap the + button to add your first plan</Text>
+          <TouchableOpacity 
+            style={styles.createFirstButton}
+            onPress={() => {
+              resetForm();
+              setShowPlanModal(true);
+            }}
+          >
+            <Text style={styles.createFirstButtonText}>Create First Plan</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -393,138 +317,108 @@ const MembershipPlansScreen = ({ navigation }) => {
               refreshing={refreshing} 
               onRefresh={onRefresh} 
               tintColor="#3b82f6"
-              colors={["#3b82f6"]}
             />
           }
-          showsVerticalScrollIndicator={false}
         />
       )}
 
       {/* Plan Form Modal */}
       <Modal
         visible={showPlanModal}
-        animationType="slide"
-        transparent={false}
         onRequestClose={() => setShowPlanModal(false)}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity 
-              onPress={() => setShowPlanModal(false)}
-              style={styles.modalCloseButton}
-            >
+            <TouchableOpacity onPress={() => setShowPlanModal(false)}>
               <Icon name="close" size={24} color="#999" />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>
-              {currentPlan ? 'Edit Plan' : 'Create New Plan'}
+              {currentPlan ? 'Edit Plan' : 'Create Plan'}
             </Text>
           </View>
 
           <ScrollView contentContainerStyle={styles.modalContent}>
-            {/* Plan Color Selection */}
+            {/* Color Selection */}
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Plan Color</Text>
-              <View style={styles.colorOptionsContainer}>
-                {PLAN_COLORS.map((colorOption) => (
+              <View style={styles.colorGrid}>
+                {COLOR_OPTIONS.map((color) => (
                   <TouchableOpacity
-                    key={colorOption.value}
+                    key={color}
                     style={[
                       styles.colorOption,
                       { 
-                        backgroundColor: colorOption.value,
-                        borderWidth: formData.color === colorOption.value ? 3 : 0,
+                        backgroundColor: color,
+                        borderWidth: formData.color === color ? 2 : 0,
                         borderColor: '#fff'
                       }
                     ]}
-                    onPress={() => setFormData({ ...formData, color: colorOption.value })}
-                  >
-                    {formData.color === colorOption.value && (
-                      <Icon name="check" size={16} color="#fff" />
-                    )}
-                  </TouchableOpacity>
+                    onPress={() => setFormData({...formData, color})}
+                  />
                 ))}
               </View>
             </View>
 
-            {/* Name Input */}
+            {/* Name */}
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Plan Name</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Enter plan name"
-                placeholderTextColor="#666"
                 value={formData.name}
-                onChangeText={text => setFormData({ ...formData, name: text })}
+                onChangeText={text => setFormData({...formData, name: text})}
               />
             </View>
 
-            {/* Price Input */}
+            {/* Price */}
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Monthly Price ($)</Text>
+              <Text style={styles.inputLabel}>Monthly Price (Rs.)</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter monthly price"
-                placeholderTextColor="#666"
+                placeholder="Enter price"
                 keyboardType="numeric"
                 value={formData.price}
-                onChangeText={text => setFormData({ ...formData, price: text })}
+                onChangeText={text => setFormData({...formData, price: text})}
               />
             </View>
 
-            {/* Icon Picker */}
+            {/* Icon */}
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Plan Icon</Text>
-              <View style={styles.iconPickerContainer}>
-                <Picker
-                  selectedValue={formData.icon}
-                  onValueChange={value => setFormData({ ...formData, icon: value })}
-                  style={styles.iconPicker}
-                  dropdownIconColor="#999"
-                >
-                  {availableIcons.map(icon => (
-                    <Picker.Item 
-                      key={icon} 
-                      label={icon} 
-                      value={icon} 
-                    />
-                  ))}
-                </Picker>
-                <View style={[
-                  styles.iconPreview, 
-                  { backgroundColor: '#222' }
-                ]}>
-                  <Icon name={formData.icon} size={24} color={formData.color} />
-                </View>
-              </View>
-            </View>
-
-            {/* Features List */}
-            <View style={styles.featuresHeader}>
-              <Text style={styles.inputLabel}>Plan Features</Text>
-              <TouchableOpacity
-                onPress={addFeature}
-                style={styles.addFeatureButton}
+              <Text style={styles.inputLabel}>Icon</Text>
+              <Picker
+                selectedValue={formData.icon}
+                onValueChange={value => setFormData({...formData, icon: value})}
+                style={styles.picker}
               >
-                <Icon name="plus" size={20} color="#3b82f6" />
-              </TouchableOpacity>
+                {ICON_OPTIONS.map(icon => (
+                  <Picker.Item key={icon} label={icon} value={icon} />
+                ))}
+              </Picker>
             </View>
 
-            {formData.features.map((feature, index) => (
-              <View key={index} style={styles.featureItem}>
-                <View style={styles.featureInputContainer}>
+            {/* Features */}
+            <View style={styles.inputContainer}>
+              <View style={styles.featuresHeader}>
+                <Text style={styles.inputLabel}>Features</Text>
+                <TouchableOpacity onPress={addFeature} style={styles.addButtonSmall}>
+                  <Icon name="plus" size={20} color="#3b82f6" />
+                </TouchableOpacity>
+              </View>
+              
+              {formData.features.map((feature, index) => (
+                <View key={index} style={styles.featureRow}>
                   <TextInput
-                    style={[styles.input, styles.featureInput]}
+                    style={styles.featureInput}
                     placeholder="Feature name"
-                    placeholderTextColor="#666"
                     value={feature.name}
                     onChangeText={text => updateFeature(index, 'name', text)}
                   />
                   <TouchableOpacity
-                    onPress={() => updateFeature(index, 'included', !feature.included)}
                     style={[
                       styles.featureToggle,
                       { backgroundColor: feature.included ? formData.color : '#666' }
                     ]}
+                    onPress={() => updateFeature(index, 'included', !feature.included)}
                   >
                     <Icon 
                       name={feature.included ? 'check' : 'close'} 
@@ -532,34 +426,27 @@ const MembershipPlansScreen = ({ navigation }) => {
                       color="#fff" 
                     />
                   </TouchableOpacity>
+                  {formData.features.length > 1 && (
+                    <TouchableOpacity 
+                      style={styles.removeButton}
+                      onPress={() => removeFeature(index)}
+                    >
+                      <Icon name="close" size={20} color="#ef4444" />
+                    </TouchableOpacity>
+                  )}
                 </View>
-                {formData.features.length > 1 && (
-                  <TouchableOpacity
-                    onPress={() => removeFeature(index)}
-                    style={styles.removeFeatureButton}
-                  >
-                    <Icon name="close" size={20} color="#ef4444" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))}
+              ))}
+            </View>
 
             {/* Save Button */}
-            <Animated.View style={[animatedStyle, { marginTop: 20 }]}>
-              <TouchableOpacity
-                style={[styles.saveButton, { backgroundColor: formData.color }]}
-                onPress={() => {
-                  animateButton();
-                  savePlan();
-                }}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.saveButtonText}>
-                  {currentPlan ? 'Update Plan' : 'Create Plan'}
-                </Text>
-                <Icon name="check" size={20} color="#fff" style={{ marginLeft: 8 }} />
-              </TouchableOpacity>
-            </Animated.View>
+            <TouchableOpacity
+              style={[styles.saveButton, { backgroundColor: formData.color }]}
+              onPress={savePlan}
+            >
+              <Text style={styles.saveButtonText}>
+                {currentPlan ? 'Update Plan' : 'Create Plan'}
+              </Text>
+            </TouchableOpacity>
           </ScrollView>
         </View>
       </Modal>
@@ -584,8 +471,6 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   headerTitle: {
     fontSize: 20,
@@ -601,75 +486,69 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
-    backgroundColor: '#000',
   },
   emptyText: {
     fontSize: 18,
     color: '#fff',
     marginTop: 16,
   },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#999',
-    marginTop: 8,
-    textAlign: 'center',
+  createFirstButton: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: '#3b82f6',
+    borderRadius: 8,
+  },
+  createFirstButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
   listContent: {
     padding: 16,
     paddingBottom: 100,
   },
   planCard: {
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    overflow: 'hidden',
-  },
-  gradientOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    backgroundColor: '#1a1a1a',
   },
   planHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-  },
-  planIcon: {
-    marginRight: 12,
+    marginBottom: 12,
   },
   planTitleContainer: {
     flex: 1,
+    marginLeft: 12,
   },
   planName: {
     fontSize: 18,
     fontWeight: '700',
   },
   planPrice: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#fff',
   },
   perMonth: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#999',
-    fontWeight: '400',
   },
   planActions: {
     flexDirection: 'row',
     gap: 8,
   },
-  actionButton: {
+  editButton: {
     padding: 8,
-    borderRadius: 12,
+  },
+  deleteButton: {
+    padding: 8,
   },
   benefitsContainer: {
     marginTop: 8,
@@ -677,14 +556,12 @@ const styles = StyleSheet.create({
   benefitItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    paddingVertical: 6,
   },
   benefitText: {
     fontSize: 14,
     color: '#fff',
-    flex: 1,
+    marginLeft: 12,
   },
   modalContainer: {
     flex: 1,
@@ -698,13 +575,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#222',
   },
-  modalCloseButton: {
-    marginRight: 16,
-  },
   modalTitle: {
+    flex: 1,
     fontSize: 20,
     fontWeight: '600',
     color: '#fff',
+    marginLeft: 16,
   },
   modalContent: {
     padding: 20,
@@ -720,89 +596,69 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: '#222',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 8,
+    padding: 12,
     color: '#fff',
     fontSize: 16,
   },
-  colorOptionsContainer: {
+  colorGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    marginTop: 8,
   },
   colorOption: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  iconPickerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconPicker: {
-    flex: 1,
-    color: '#fff',
+  picker: {
     backgroundColor: '#222',
-    borderRadius: 12,
-  },
-  iconPreview: {
-    width: 50,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 10,
-    borderRadius: 12,
+    borderRadius: 8,
+    color: '#fff',
   },
   featuresHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  addFeatureButton: {
+  addButtonSmall: {
     padding: 8,
-    borderRadius: 12,
-    backgroundColor: 'rgba(59, 130, 246, 0.2)',
   },
-  featureItem: {
+  featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  featureInputContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginBottom: 8,
   },
   featureInput: {
     flex: 1,
-    marginRight: 10,
+    backgroundColor: '#222',
+    borderRadius: 8,
+    padding: 12,
+    color: '#fff',
+    marginRight: 8,
   },
   featureToggle: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  removeFeatureButton: {
+  removeButton: {
     padding: 10,
-    marginLeft: 10,
+    marginLeft: 8,
   },
   saveButton: {
-    padding: 18,
-    borderRadius: 14,
-    flexDirection: 'row',
-    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 8,
     alignItems: 'center',
+    marginTop: 20,
   },
   saveButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
     color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 

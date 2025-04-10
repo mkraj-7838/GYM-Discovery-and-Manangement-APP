@@ -49,6 +49,9 @@ const colors = {
   divider: "#333333",
   card: "#252525",
   highlight: "#FF9800",
+  ratingHigh: "#4CAF50",
+  ratingMedium: "#FFC107",
+  ratingLow: "#F44336",
 };
 
 export default function Profile() {
@@ -63,35 +66,45 @@ export default function Profile() {
     phone: "",
     photo: "",
     coverPhoto: "",
-    certifications: []
   });
-  const [newCertification, setNewCertification] = useState("");
+  const [feedbackData, setFeedbackData] = useState([]);
+  const [averageRatings, setAverageRatings] = useState({
+    overall: 0,
+    cleanliness: 0,
+    equipment: 0,
+    staff: 0,
+    availability: 0,
+    ambiance: 0,
+    recommendation: 0
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState("overview");
 
-  // Load profile data
+  // Load profile and feedback data
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
         const token = await AsyncStorage.getItem("token");
         
-        const [profileRes, certsRes] = await Promise.all([
+        const [profileRes, feedbackRes] = await Promise.all([
           axios.get(`${API_BASE_URL}/user/profile`, {
             headers: { Authorization: `Bearer ${token}` }
           }),
-          axios.get(`${API_BASE_URL}/user/certifications`, {
+          axios.get(`${API_BASE_URL}/feedback`, {
             headers: { Authorization: `Bearer ${token}` }
           })
         ]);
         
-        setProfileData({
-          ...profileRes.data,
-          certifications: certsRes.data
-        });
+        setProfileData(profileRes.data);
+        setFeedbackData(feedbackRes.data.data || []);
+        
+        // Calculate average ratings
+        if (feedbackRes.data.data?.length > 0) {
+          calculateAverageRatings(feedbackRes.data.data);
+        }
       } catch (error) {
         Alert.alert("Error", "Failed to load profile data");
         console.error("Fetch error:", error);
@@ -102,6 +115,43 @@ export default function Profile() {
 
     fetchData();
   }, []);
+
+  // Calculate average ratings from feedback
+  const calculateAverageRatings = (feedback) => {
+    const totals = {
+      overall: 0,
+      cleanliness: 0,
+      equipment: 0,
+      staff: 0,
+      availability: 0,
+      ambiance: 0,
+      recommendation: { yes: 0, no: 0, maybe: 0 }
+    };
+
+    feedback.forEach(item => {
+      totals.overall += item.ratings.overall;
+      totals.cleanliness += item.ratings.cleanliness;
+      totals.equipment += item.ratings.equipment;
+      totals.staff += item.ratings.staff;
+      totals.availability += item.ratings.availability;
+      totals.ambiance += item.ratings.ambiance;
+      
+      if (item.recommendation === 'yes') totals.recommendation.yes++;
+      else if (item.recommendation === 'no') totals.recommendation.no++;
+      else totals.recommendation.maybe++;
+    });
+
+    const count = feedback.length;
+    setAverageRatings({
+      overall: totals.overall / count,
+      cleanliness: totals.cleanliness / count,
+      equipment: totals.equipment / count,
+      staff: totals.staff / count,
+      availability: totals.availability / count,
+      ambiance: totals.ambiance / count,
+      recommendation: (totals.recommendation.yes / count) * 100
+    });
+  };
 
   // Handle image upload
   const uploadImage = async (type) => {
@@ -165,61 +215,93 @@ export default function Profile() {
     }
   };
 
-  // Add certification
-  const addCertification = async () => {
-    if (!newCertification.trim()) return;
-
-    const token = await AsyncStorage.getItem("token");
-    
-    try {
-      const response = await axios.post(
-        `${API_BASE_URL}/user/certifications`, 
-        { name: newCertification },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-      
-      setProfileData(prev => ({
-        ...prev,
-        certifications: [...prev.certifications, response.data]
-      }));
-      setNewCertification("");
-      setModalVisible(false);
-    } catch (error) {
-      Alert.alert("Error", "Failed to add certification");
-      console.error("Certification error:", error);
-    }
-  };
-
-  // Remove certification
-  const removeCertification = async (id) => {
-    try {
-      const token = await AsyncStorage.getItem("token");
-      await axios.delete(`${API_BASE_URL}/user/certifications/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      setProfileData(prev => ({
-        ...prev,
-        certifications: prev.certifications.filter(cert => cert._id !== id)
-      }));
-    } catch (error) {
-      Alert.alert("Error", "Failed to remove certification");
-      console.error("Remove cert error:", error);
-    }
-  };
-
   // Handle logout
   const handleLogout = () => {
     dispatch(logoutAction());
     router.replace("/auth/login");
   };
 
-  // Navigation functions
-  const navigateTo = (screen) => {
-    router.replace(`${screen}`);
+  // Render star ratings
+  const renderStars = (rating) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    
+    for (let i = 1; i <= 5; i++) {
+      if (i <= fullStars) {
+        stars.push(<AntDesign key={i} name="star" size={16} color={colors.ratingHigh} />);
+      } else if (i === fullStars + 1 && hasHalfStar) {
+        stars.push(<AntDesign key={i} name="star" size={16} color={colors.ratingMedium} />);
+      } else {
+        stars.push(<AntDesign key={i} name="staro" size={16} color={colors.secondaryText} />);
+      }
+    }
+    
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        {stars}
+        <Text style={{ color: colors.text, marginLeft: 5 }}>{rating.toFixed(1)}</Text>
+      </View>
+    );
   };
+
+  // Render rating bar
+  const renderRatingBar = (label, value, iconName, iconType = 'MaterialIcons') => {
+    const IconComponent = iconType === 'MaterialIcons' ? MaterialIcons : 
+                         iconType === 'FontAwesome' ? FontAwesome : 
+                         iconType === 'Ionicons' ? Ionicons : MaterialIcons;
+    
+    let color = colors.ratingHigh;
+    if (value < 3) color = colors.ratingLow;
+    else if (value < 4) color = colors.ratingMedium;
+    
+    return (
+      <View style={styles.ratingItem}>
+        <View style={styles.ratingLabel}>
+          <IconComponent name={iconName} size={20} color={colors.primary} />
+          <Text style={[styles.ratingText, { color: colors.text }]}>{label}</Text>
+        </View>
+        {renderStars(value)}
+      </View>
+    );
+  };
+
+  // Render feedback item
+  const renderFeedbackItem = ({ item }) => (
+    <View style={styles.feedbackItem}>
+      <View style={styles.feedbackHeader}>
+        <Text style={[styles.feedbackMember, { color: colors.text }]}>
+          {item.member?.name || 'Anonymous'}
+        </Text>
+        <Text style={{ color: colors.secondaryText }}>
+          {new Date(item.createdAt).toLocaleDateString()}
+        </Text>
+      </View>
+      
+      <View style={styles.feedbackRating}>
+        <Text style={{ color: colors.text }}>Overall: </Text>
+        {renderStars(item.ratings.overall)}
+      </View>
+      
+      <Text style={[styles.feedbackComment, { color: colors.text }]}>
+        {item.feedback.comments || 'No comments provided'}
+      </Text>
+      
+      <View style={styles.feedbackRecommendation}>
+        <MaterialIcons 
+          name={item.recommendation === 'yes' ? 'thumb-up' : 'thumb-down'} 
+          size={16} 
+          color={item.recommendation === 'yes' ? colors.ratingHigh : colors.ratingLow} 
+        />
+        <Text style={{ 
+          color: item.recommendation === 'yes' ? colors.ratingHigh : colors.ratingLow,
+          marginLeft: 5
+        }}>
+          {item.recommendation === 'yes' ? 'Recommends' : 'Does not recommend'}
+        </Text>
+      </View>
+    </View>
+  );
 
   if (isLoading) {
     return (
@@ -297,44 +379,44 @@ export default function Profile() {
         {/* Navigation Tabs */}
         <View style={styles.tabContainer}>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'profile' && styles.activeTab]}
-            onPress={() => setActiveTab('profile')}
+            style={[styles.tabButton, activeTab === 'overview' && styles.activeTab]}
+            onPress={() => setActiveTab('overview')}
           >
             <MaterialIcons 
-              name="person" 
+              name="dashboard" 
               size={24} 
-              color={activeTab === 'profile' ? colors.primary : colors.secondaryText} 
+              color={activeTab === 'overview' ? colors.primary : colors.secondaryText} 
             />
-            <Text style={[styles.tabText, activeTab === 'profile' && { color: colors.primary }]}>
-              Profile
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'announcements' && styles.activeTab]}
-            onPress={() => navigateTo('/(tools)/GymNotice')}
-          >
-            <Ionicons 
-              name="megaphone" 
-              size={24} 
-              color={activeTab === 'announcements' ? colors.primary : colors.secondaryText} 
-            />
-            <Text style={[styles.tabText, activeTab === 'announcements' && { color: colors.primary }]}>
-              Announce
+            <Text style={[styles.tabText, activeTab === 'overview' && { color: colors.primary }]}>
+              Overview
             </Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
             style={[styles.tabButton, activeTab === 'feedback' && styles.activeTab]}
-            onPress={() => navigateTo('feedback')}
+            onPress={() => setActiveTab('feedback')}
           >
             <MaterialIcons 
-              name="feedback" 
+              name="reviews" 
               size={24} 
               color={activeTab === 'feedback' ? colors.primary : colors.secondaryText} 
             />
             <Text style={[styles.tabText, activeTab === 'feedback' && { color: colors.primary }]}>
               Feedback
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'settings' && styles.activeTab]}
+            onPress={() => setActiveTab('settings')}
+          >
+            <Ionicons 
+              name="settings-sharp" 
+              size={24} 
+              color={activeTab === 'settings' ? colors.primary : colors.secondaryText} 
+            />
+            <Text style={[styles.tabText, activeTab === 'settings' && { color: colors.primary }]}>
+              Settings
             </Text>
           </TouchableOpacity>
         </View>
@@ -357,181 +439,176 @@ export default function Profile() {
             )}
           </View>
 
-          {/* Contact Info Section */}
-          <View style={[styles.section, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.sectionTitle, { color: colors.primary }]}>Contact Information</Text>
-            
-            <View style={styles.detailItem}>
-              <MaterialIcons name="location-on" size={24} color={colors.primary} />
-              {isEditing ? (
-                <TextInput
-                  style={[styles.editInput, { color: colors.text }]}
-                  value={profileData.address}
-                  onChangeText={(text) => setProfileData({...profileData, address: text})}
-                  placeholder="Address"
-                  placeholderTextColor={colors.secondaryText}
-                />
-              ) : (
-                <Text style={[styles.detailText, { color: colors.text }]}>
-                  {profileData.address || "Not specified"}
+          {/* Overview Tab Content */}
+          {activeTab === 'overview' && (
+            <>
+              {/* Ratings Summary */}
+              <View style={[styles.section, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.sectionTitle, { color: colors.primary }]}>
+                  Gym Ratings Summary
                 </Text>
-              )}
-              {!isEditing && profileData.address && (
-                <TouchableOpacity 
-                  onPress={() => Linking.openURL(`https://maps.google.com/?q=${profileData.address}`)}
-                  style={styles.actionIcon}
-                >
-                  <Entypo name="direction" size={20} color={colors.primary} />
-                </TouchableOpacity>
-              )}
-            </View>
-            
-            <View style={styles.detailItem}>
-              <MaterialIcons name="phone" size={24} color={colors.primary} />
-              {isEditing ? (
-                <TextInput
-                  style={[styles.editInput, { color: colors.text }]}
-                  value={profileData.phone}
-                  onChangeText={(text) => setProfileData({...profileData, phone: text})}
-                  placeholder="Phone Number"
-                  placeholderTextColor={colors.secondaryText}
-                  keyboardType="phone-pad"
-                />
-              ) : (
-                <Text style={[styles.detailText, { color: colors.text }]}>
-                  {profileData.phone || "Not specified"}
-                </Text>
-              )}
-              {!isEditing && profileData.phone && (
-                <TouchableOpacity 
-                  onPress={() => Linking.openURL(`tel:${profileData.phone}`)}
-                  style={styles.actionIcon}
-                >
-                  <MaterialIcons name="call" size={20} color={colors.primary} />
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          {/* Certifications Section */}
-          <View style={[styles.section, { backgroundColor: colors.surface }]}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.primary }]}>Certifications</Text>
-              <TouchableOpacity 
-                onPress={() => setModalVisible(true)}
-                style={styles.addButton}
-              >
-                <AntDesign name="plus" size={20} color={colors.primary} />
-              </TouchableOpacity>
-            </View>
-            
-            {profileData.certifications?.length > 0 ? (
-              <FlatList
-                data={profileData.certifications}
-                scrollEnabled={false}
-                renderItem={({ item }) => (
-                  <View style={styles.certItem}>
-                    <MaterialCommunityIcons name="certificate" size={20} color={colors.accent} />
-                    <Text style={[styles.certText, { color: colors.text }]}>{item.name}</Text>
-                    {isEditing && (
-                      <TouchableOpacity 
-                        onPress={() => removeCertification(item._id)}
-                        style={styles.deleteCert}
-                      >
-                        <AntDesign name="close" size={16} color={colors.error} />
-                      </TouchableOpacity>
-                    )}
+                
+                <View style={styles.overallRating}>
+                  <Text style={[styles.overallRatingText, { color: colors.text }]}>
+                    Overall Rating
+                  </Text>
+                  <Text style={[styles.overallRatingValue, { color: colors.ratingHigh }]}>
+                    {averageRatings.overall.toFixed(1)}
+                  </Text>
+                  {renderStars(averageRatings.overall)}
+                  <Text style={[styles.ratingCount, { color: colors.secondaryText }]}>
+                    Based on {feedbackData.length} reviews
+                  </Text>
+                </View>
+                
+                {renderRatingBar('Cleanliness', averageRatings.cleanliness, 'cleaning-services')}
+                {renderRatingBar('Equipment', averageRatings.equipment, 'fitness-center')}
+                {renderRatingBar('Staff', averageRatings.staff, 'people-alt')}
+                {renderRatingBar('Availability', averageRatings.availability, 'access-time')}
+                {renderRatingBar('Ambiance', averageRatings.ambiance, 'mood')}
+                
+                <View style={styles.recommendationContainer}>
+                  <Text style={[styles.recommendationText, { color: colors.text }]}>
+                    Recommendation Rate
+                  </Text>
+                  <View style={styles.progressBar}>
+                    <View style={[styles.progressFill, { 
+                      width: `${averageRatings.recommendation}%`,
+                      backgroundColor: averageRatings.recommendation > 70 ? colors.ratingHigh : 
+                                       averageRatings.recommendation > 40 ? colors.ratingMedium : colors.ratingLow
+                    }]} />
                   </View>
-                )}
-                keyExtractor={(item) => item._id}
-              />
-            ) : (
-              <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
-                No certifications added yet
-              </Text>
-            )}
-          </View>
-
-          {/* Action Buttons */}
-          <View style={styles.buttonContainer}>
-            {isEditing ? (
-              <>
-                <TouchableOpacity 
-                  style={[styles.button, { backgroundColor: colors.success }]}
-                  onPress={updateProfile}
-                  disabled={isLoading}
-                >
-                  <MaterialIcons name="save" size={20} color="white" />
-                  <Text style={styles.buttonText}>Save Changes</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.button, { backgroundColor: colors.error }]}
-                  onPress={() => setIsEditing(false)}
-                >
-                  <AntDesign name="close" size={20} color="white" />
-                  <Text style={styles.buttonText}>Cancel</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <TouchableOpacity 
-                style={[styles.button, { backgroundColor: colors.primary }]}
-                onPress={() => setIsEditing(true)}
-              >
-                <MaterialIcons name="edit" size={20} color="white" />
-                <Text style={styles.buttonText}>Edit Profile</Text>
-              </TouchableOpacity>
-            )}
-            
-            <TouchableOpacity 
-              style={[styles.button, { backgroundColor: colors.card }]}
-              onPress={handleLogout}
-            >
-              <Ionicons name="log-out-outline" size={20} color={colors.error} />
-              <Text style={[styles.buttonText, { color: colors.error }]}>Logout</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-
-        {/* Add Certification Modal */}
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={modalVisible}
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <View style={styles.modalContainer}>
-            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Add Certification</Text>
-              
-              <TextInput
-                style={[styles.modalInput, { 
-                  color: colors.text,
-                  borderColor: colors.divider,
-                  backgroundColor: colors.card
-                }]}
-                value={newCertification}
-                onChangeText={setNewCertification}
-                placeholder="Certification Name"
-                placeholderTextColor={colors.secondaryText}
-              />
-              
-              <View style={styles.modalButtons}>
-                <TouchableOpacity 
-                  style={[styles.modalButton, { backgroundColor: colors.error }]}
-                  onPress={() => setModalVisible(false)}
-                >
-                  <Text style={styles.buttonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.modalButton, { backgroundColor: colors.success }]}
-                  onPress={addCertification}
-                >
-                  <Text style={styles.buttonText}>Add</Text>
-                </TouchableOpacity>
+                  <Text style={[styles.recommendationValue, { color: colors.text }]}>
+                    {averageRatings.recommendation.toFixed(0)}%
+                  </Text>
+                </View>
               </View>
+              
+              {/* Contact Info Section */}
+              <View style={[styles.section, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.sectionTitle, { color: colors.primary }]}>Contact Information</Text>
+                
+                <View style={styles.detailItem}>
+                  <MaterialIcons name="location-on" size={24} color={colors.primary} />
+                  {isEditing ? (
+                    <TextInput
+                      style={[styles.editInput, { color: colors.text }]}
+                      value={profileData.address}
+                      onChangeText={(text) => setProfileData({...profileData, address: text})}
+                      placeholder="Address"
+                      placeholderTextColor={colors.secondaryText}
+                    />
+                  ) : (
+                    <Text style={[styles.detailText, { color: colors.text }]}>
+                      {profileData.address || "Not specified"}
+                    </Text>
+                  )}
+                  {!isEditing && profileData.address && (
+                    <TouchableOpacity 
+                      onPress={() => Linking.openURL(`https://maps.google.com/?q=${profileData.address}`)}
+                      style={styles.actionIcon}
+                    >
+                      <Entypo name="direction" size={20} color={colors.primary} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                
+                <View style={styles.detailItem}>
+                  <MaterialIcons name="phone" size={24} color={colors.primary} />
+                  {isEditing ? (
+                    <TextInput
+                      style={[styles.editInput, { color: colors.text }]}
+                      value={profileData.phone}
+                      onChangeText={(text) => setProfileData({...profileData, phone: text})}
+                      placeholder="Phone Number"
+                      placeholderTextColor={colors.secondaryText}
+                      keyboardType="phone-pad"
+                    />
+                  ) : (
+                    <Text style={[styles.detailText, { color: colors.text }]}>
+                      {profileData.phone || "Not specified"}
+                    </Text>
+                  )}
+                  {!isEditing && profileData.phone && (
+                    <TouchableOpacity 
+                      onPress={() => Linking.openURL(`tel:${profileData.phone}`)}
+                      style={styles.actionIcon}
+                    >
+                      <MaterialIcons name="call" size={20} color={colors.primary} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            </>
+          )}
+          
+          {/* Feedback Tab Content */}
+          {activeTab === 'feedback' && (
+            <View style={[styles.section, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.sectionTitle, { color: colors.primary }]}>
+                Member Feedback ({feedbackData.length})
+              </Text>
+              
+              {feedbackData.length > 0 ? (
+                <FlatList
+                  data={feedbackData}
+                  scrollEnabled={false}
+                  renderItem={renderFeedbackItem}
+                  keyExtractor={(item) => item._id}
+                  ItemSeparatorComponent={() => <View style={styles.feedbackSeparator} />}
+                />
+              ) : (
+                <View style={styles.emptyFeedback}>
+                  <Ionicons name="sad-outline" size={40} color={colors.secondaryText} />
+                  <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+                    No feedback received yet
+                  </Text>
+                </View>
+              )}
             </View>
-          </View>
-        </Modal>
+          )}
+          
+          {/* Settings Tab Content */}
+          {activeTab === 'settings' && (
+            <View style={styles.buttonContainer}>
+              {isEditing ? (
+                <>
+                  <TouchableOpacity 
+                    style={[styles.button, { backgroundColor: colors.success }]}
+                    onPress={updateProfile}
+                    disabled={isLoading}
+                  >
+                    <MaterialIcons name="save" size={20} color="white" />
+                    <Text style={styles.buttonText}>Save Changes</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.button, { backgroundColor: colors.error }]}
+                    onPress={() => setIsEditing(false)}
+                  >
+                    <AntDesign name="close" size={20} color="white" />
+                    <Text style={styles.buttonText}>Cancel</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TouchableOpacity 
+                  style={[styles.button, { backgroundColor: colors.primary }]}
+                  onPress={() => setIsEditing(true)}
+                >
+                  <MaterialIcons name="edit" size={20} color="white" />
+                  <Text style={styles.buttonText}>Edit Profile</Text>
+                </TouchableOpacity>
+              )}
+              
+              <TouchableOpacity 
+                style={[styles.button, { backgroundColor: colors.card }]}
+                onPress={handleLogout}
+              >
+                <Ionicons name="log-out-outline" size={20} color={colors.error} />
+                <Text style={[styles.buttonText, { color: colors.error }]}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </ScrollView>
       </View>
     </ProtectedRoute>
   );
@@ -642,6 +719,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
+    paddingBottom: 20,
   },
   gymNameContainer: {
     padding: 15,
@@ -680,18 +758,10 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 3,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  addButton: {
-    padding: 5,
+    marginBottom: 15,
   },
   detailItem: {
     flexDirection: 'row',
@@ -716,21 +786,6 @@ const styles = StyleSheet.create({
   actionIcon: {
     padding: 5,
     marginLeft: 10,
-  },
-  certItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  certText: {
-    fontSize: 16,
-    marginLeft: 15,
-    flex: 1,
-  },
-  deleteCert: {
-    padding: 5,
   },
   emptyText: {
     fontSize: 14,
@@ -761,44 +816,99 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 10,
   },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  // Ratings styles
+  overallRating: {
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    width: '80%',
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
     marginBottom: 20,
-    textAlign: 'center',
   },
-  modalInput: {
+  overallRatingText: {
     fontSize: 16,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 20,
-    borderWidth: 1,
+    marginBottom: 5,
   },
-  modalButtons: {
+  overallRatingValue: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  ratingCount: {
+    fontSize: 12,
+    marginTop: 5,
+  },
+  ratingItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  modalButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
     alignItems: 'center',
-    marginHorizontal: 5,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  ratingLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  ratingText: {
+    fontSize: 16,
+    marginLeft: 10,
+  },
+  recommendationContainer: {
+    marginTop: 15,
+    alignItems: 'center',
+  },
+  recommendationText: {
+    fontSize: 16,
+    marginBottom: 5,
+  },
+  progressBar: {
+    height: 10,
+    width: '100%',
+    backgroundColor: colors.divider,
+    borderRadius: 5,
+    marginVertical: 10,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 5,
+  },
+  recommendationValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  // Feedback styles
+  feedbackItem: {
+    paddingVertical: 15,
+  },
+  feedbackHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  feedbackMember: {
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  feedbackRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  feedbackComment: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 10,
+  },
+  feedbackRecommendation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  feedbackSeparator: {
+    height: 1,
+    backgroundColor: colors.divider,
+    marginVertical: 5,
+  },
+  emptyFeedback: {
+    alignItems: 'center',
+    paddingVertical: 30,
   },
 });

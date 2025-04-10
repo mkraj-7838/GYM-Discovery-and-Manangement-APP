@@ -9,6 +9,7 @@ import {
   ScrollView,
   Image,
   Animated,
+  TextInput,
 } from "react-native";
 import moment from "moment";
 import * as Animatable from 'react-native-animatable';
@@ -18,7 +19,8 @@ import {
   MaterialCommunityIcons,
   FontAwesome,
   Feather,
-  Ionicons
+  Ionicons,
+  Entypo
 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -33,6 +35,7 @@ const MemberAttendance = () => {
   const [members, setMembers] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [isMarkingAttendance, setIsMarkingAttendance] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const fadeAnim = useState(new Animated.Value(0))[0];
 
   // Enhanced dark theme colors
@@ -149,7 +152,16 @@ const MemberAttendance = () => {
     }
   };
 
-  const memberWithAttendance = members.map((member) => {
+  // Filter members based on search query (name or phone number)
+  const filteredMembers = members.filter(member => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      member.name?.toLowerCase().includes(searchLower) ||
+      member.phone?.includes(searchQuery)
+    );
+  });
+
+  const memberWithAttendance = filteredMembers.map((member) => {
     const attendanceRecord = attendance.find((record) => 
       String(record.memberId) === String(member._id) || 
       String(record.memberId) === String(member.memberId)
@@ -204,6 +216,29 @@ const MemberAttendance = () => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
+        {/* Search Bar */}
+        <View style={[styles.searchContainer, { backgroundColor: colors.cardBackground }]}>
+          <View style={[styles.searchInputContainer, { backgroundColor: colors.inputBackground }]}>
+            <Feather name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder="Search by name or phone..."
+              placeholderTextColor={colors.textSecondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              clearButtonMode="while-editing"
+            />
+            {searchQuery.length > 0 && (
+              <Pressable
+                onPress={() => setSearchQuery("")}
+                style={styles.clearButton}
+              >
+                <Entypo name="cross" size={20} color={colors.textSecondary} />
+              </Pressable>
+            )}
+          </View>
+        </View>
+
         {/* Date Navigation */}
         <View style={[styles.dateContainer, { backgroundColor: colors.cardBackground }]}>
           <Pressable 
@@ -239,7 +274,7 @@ const MemberAttendance = () => {
         <View style={[styles.summaryContainer, { backgroundColor: colors.cardBackground }]}>
           <View style={styles.summaryItem}>
             <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Total Members</Text>
-            <Text style={[styles.summaryValue, { color: colors.text }]}>{members.length}</Text>
+            <Text style={[styles.summaryValue, { color: colors.text }]}>{filteredMembers.length}</Text>
           </View>
           <View style={styles.summaryItem}>
             <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Present</Text>
@@ -284,9 +319,9 @@ const MemberAttendance = () => {
                   {member?.name || "Unknown Member"}
                 </Text>
                 <View style={styles.memberMeta}>
-                  <MaterialCommunityIcons name="identifier" size={14} color={colors.textSecondary} />
+                  <MaterialCommunityIcons name="phone" size={14} color={colors.textSecondary} />
                   <Text style={[styles.memberId, { color: colors.textSecondary }]}>
-                    {member?.memberId || "N/A"}
+                    {member?.phone || "N/A"}
                   </Text>
                 </View>
                 {member.isPresent && member.checkInTime && (
@@ -332,11 +367,23 @@ const MemberAttendance = () => {
           ))
         ) : (
           <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons name="account-group" size={48} color={colors.textSecondary} />
-            <Text style={[styles.emptyText, { color: colors.text }]}>No members found</Text>
-            <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
-              Add members to track attendance
-            </Text>
+            {searchQuery.length > 0 ? (
+              <>
+                <MaterialCommunityIcons name="magnify" size={48} color={colors.textSecondary} />
+                <Text style={[styles.emptyText, { color: colors.text }]}>No members found</Text>
+                <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
+                  No results for "{searchQuery}"
+                </Text>
+              </>
+            ) : (
+              <>
+                <MaterialCommunityIcons name="account-group" size={48} color={colors.textSecondary} />
+                <Text style={[styles.emptyText, { color: colors.text }]}>No members found</Text>
+                <Text style={[styles.emptySubText, { color: colors.textSecondary }]}>
+                  Add members to track attendance
+                </Text>
+              </>
+            )}
           </View>
         )}
       </ScrollView>
@@ -375,12 +422,34 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
   },
+  searchContainer: {
+    padding: 16,
+    paddingBottom: 8,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 50,
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    height: '100%',
+    fontSize: 16,
+  },
+  clearButton: {
+    padding: 8,
+  },
   dateContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    margin: 16,
+    marginHorizontal: 16,
     borderRadius: 12,
     elevation: 2,
   },
